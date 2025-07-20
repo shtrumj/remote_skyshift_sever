@@ -1,0 +1,347 @@
+"""
+SQLite Database Module for Agent Registration
+"""
+from sqlalchemy import create_engine, Column, String, DateTime, Integer, Text, Boolean
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from datetime import datetime, timedelta
+import json
+from typing import List, Optional
+
+# Database setup
+DATABASE_URL = "sqlite:///./agents.db"
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+class Agent(Base):
+    """Agent registration model"""
+    __tablename__ = "agents"
+    
+    id = Column(String, primary_key=True, index=True)
+    agent_id = Column(String, unique=True, index=True)
+    hostname = Column(String, index=True)
+    ip_address = Column(String)
+    port = Column(Integer)
+    capabilities = Column(Text)  # JSON string
+    version = Column(String)
+    registered_at = Column(DateTime, default=datetime.utcnow)
+    last_heartbeat = Column(DateTime, default=datetime.utcnow)
+    status = Column(String, default="online")
+    is_active = Column(Boolean, default=True)
+
+class Task(Base):
+    """Task execution model"""
+    __tablename__ = "tasks"
+    
+    id = Column(String, primary_key=True, index=True)
+    agent_id = Column(String, index=True)
+    task_id = Column(String, unique=True, index=True)
+    command = Column(Text)
+    status = Column(String, default="pending")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    exit_code = Column(Integer, nullable=True)
+    output = Column(Text, nullable=True)
+    error = Column(Text, nullable=True)
+    logs = Column(Text, nullable=True)  # JSON string
+
+class DatabaseManager:
+    """Database manager for agent and task operations"""
+    
+    def __init__(self):
+        self.engine = engine
+        self.SessionLocal = SessionLocal
+        self.create_tables()
+    
+    def create_tables(self):
+        """Create database tables"""
+        Base.metadata.create_all(bind=self.engine)
+    
+    def get_session(self):
+        """Get database session"""
+        return self.SessionLocal()
+    
+    def register_agent(self, agent_data: dict) -> str:
+        """Register a new agent in the database"""
+        session = self.get_session()
+        try:
+            # Check if agent already exists
+            existing_agent = session.query(Agent).filter(
+                Agent.agent_id == agent_data["agent_id"]
+            ).first()
+            
+            if existing_agent:
+                # Update existing agent
+                existing_agent.hostname = agent_data["hostname"]
+                existing_agent.ip_address = agent_data["ip_address"]
+                existing_agent.port = agent_data["port"]
+                existing_agent.capabilities = json.dumps(agent_data["capabilities"])
+                existing_agent.version = agent_data["version"]
+                existing_agent.last_heartbeat = datetime.utcnow()
+                existing_agent.status = "online"
+                existing_agent.is_active = True
+                session.commit()
+                return existing_agent.agent_id
+            else:
+                # Create new agent
+                agent = Agent(
+                    id=agent_data["id"],
+                    agent_id=agent_data["agent_id"],
+                    hostname=agent_data["hostname"],
+                    ip_address=agent_data["ip_address"],
+                    port=agent_data["port"],
+                    capabilities=json.dumps(agent_data["capabilities"]),
+                    version=agent_data["version"],
+                    registered_at=datetime.utcnow(),
+                    last_heartbeat=datetime.utcnow(),
+                    status="online",
+                    is_active=True
+                )
+                session.add(agent)
+                session.commit()
+                session.refresh(agent)
+                return agent.agent_id
+        finally:
+            session.close()
+    
+    def update_heartbeat(self, agent_id: str, status: str = "online"):
+        """Update agent heartbeat"""
+        session = self.get_session()
+        try:
+            agent = session.query(Agent).filter(Agent.agent_id == agent_id).first()
+            if agent:
+                agent.last_heartbeat = datetime.utcnow()
+                agent.status = status
+                session.commit()
+                return True
+            return False
+        finally:
+            session.close()
+    
+    def get_agent(self, agent_id: str) -> Optional[dict]:
+        """Get agent by ID"""
+        session = self.get_session()
+        try:
+            agent = session.query(Agent).filter(Agent.agent_id == agent_id).first()
+            if agent:
+                return {
+                    "agent_id": agent.agent_id,
+                    "hostname": agent.hostname,
+                    "ip_address": agent.ip_address,
+                    "port": agent.port,
+                    "capabilities": json.loads(agent.capabilities),
+                    "version": agent.version,
+                    "registered_at": agent.registered_at,
+                    "last_heartbeat": agent.last_heartbeat,
+                    "status": agent.status
+                }
+            return None
+        finally:
+            session.close()
+    
+    def get_agent_by_hostname(self, hostname: str) -> Optional[dict]:
+        """Get agent by hostname (only active agents)"""
+        session = self.get_session()
+        try:
+            agent = session.query(Agent).filter(
+                Agent.hostname == hostname,
+                Agent.is_active == True
+            ).first()
+            if agent:
+                return {
+                    "agent_id": agent.agent_id,
+                    "hostname": agent.hostname,
+                    "ip_address": agent.ip_address,
+                    "port": agent.port,
+                    "capabilities": json.loads(agent.capabilities),
+                    "version": agent.version,
+                    "registered_at": agent.registered_at,
+                    "last_heartbeat": agent.last_heartbeat,
+                    "status": agent.status
+                }
+            return None
+        finally:
+            session.close()
+    
+    def delete_agent(self, agent_id: str) -> bool:
+        """Delete agent by ID (soft delete - sets is_active to False)"""
+        session = self.get_session()
+        try:
+            agent = session.query(Agent).filter(Agent.agent_id == agent_id).first()
+            if agent:
+                agent.is_active = False
+                session.commit()
+                return True
+            return False
+        except Exception as e:
+            print(f"❌ Error deleting agent {agent_id}: {e}")
+            return False
+        finally:
+            session.close()
+    
+    def get_all_agents(self) -> List[dict]:
+        """Get all active agents"""
+        session = self.get_session()
+        try:
+            agents = session.query(Agent).filter(Agent.is_active == True).all()
+            return [
+                {
+                    "agent_id": agent.agent_id,
+                    "hostname": agent.hostname,
+                    "ip_address": agent.ip_address,
+                    "port": agent.port,
+                    "capabilities": json.loads(agent.capabilities),
+                    "version": agent.version,
+                    "registered_at": agent.registered_at,
+                    "last_heartbeat": agent.last_heartbeat,
+                    "status": agent.status
+                }
+                for agent in agents
+            ]
+        finally:
+            session.close()
+    
+    def get_online_agents(self, timeout_minutes: int = 2) -> List[dict]:
+        """Get online agents (heartbeat within timeout)"""
+        session = self.get_session()
+        try:
+            timeout_threshold = datetime.utcnow() - timedelta(minutes=timeout_minutes)
+            agents = session.query(Agent).filter(
+                Agent.is_active == True,
+                Agent.last_heartbeat >= timeout_threshold
+            ).all()
+            return [
+                {
+                    "agent_id": agent.agent_id,
+                    "hostname": agent.hostname,
+                    "ip_address": agent.ip_address,
+                    "port": agent.port,
+                    "capabilities": json.loads(agent.capabilities),
+                    "version": agent.version,
+                    "registered_at": agent.registered_at,
+                    "last_heartbeat": agent.last_heartbeat,
+                    "status": agent.status
+                }
+                for agent in agents
+            ]
+        finally:
+            session.close()
+    
+    def mark_agent_offline(self, agent_id: str):
+        """Mark agent as offline"""
+        session = self.get_session()
+        try:
+            agent = session.query(Agent).filter(Agent.agent_id == agent_id).first()
+            if agent:
+                agent.status = "offline"
+                session.commit()
+        finally:
+            session.close()
+    
+    def create_task(self, task_data: dict) -> str:
+        """Create a new task"""
+        session = self.get_session()
+        try:
+            task = Task(
+                id=task_data["id"],
+                agent_id=task_data["agent_id"],
+                task_id=task_data["task_id"],
+                command=task_data["command"],
+                status=task_data["status"],
+                created_at=datetime.utcnow()
+            )
+            session.add(task)
+            session.commit()
+            session.refresh(task)
+            return task.task_id
+        finally:
+            session.close()
+    
+    def update_task(self, task_id: str, updates: dict):
+        """Update task status"""
+        session = self.get_session()
+        try:
+            task = session.query(Task).filter(Task.task_id == task_id).first()
+            if task:
+                for key, value in updates.items():
+                    if hasattr(task, key):
+                        if key == "logs" and isinstance(value, list):
+                            setattr(task, key, json.dumps(value))
+                        else:
+                            setattr(task, key, value)
+                session.commit()
+        finally:
+            session.close()
+    
+    def get_task(self, task_id: str) -> Optional[dict]:
+        """Get task by ID"""
+        session = self.get_session()
+        try:
+            task = session.query(Task).filter(Task.task_id == task_id).first()
+            if task:
+                return {
+                    "id": task.id,
+                    "agent_id": task.agent_id,
+                    "task_id": task.task_id,
+                    "command": task.command,
+                    "status": task.status,
+                    "created_at": task.created_at,
+                    "started_at": task.started_at,
+                    "completed_at": task.completed_at,
+                    "exit_code": task.exit_code,
+                    "output": task.output,
+                    "error": task.error,
+                    "logs": json.loads(task.logs) if task.logs else []
+                }
+            return None
+        finally:
+            session.close()
+    
+    def get_agent_tasks(self, agent_id: str) -> List[dict]:
+        """Get all tasks for an agent"""
+        session = self.get_session()
+        try:
+            tasks = session.query(Task).filter(Task.agent_id == agent_id).all()
+            return [
+                {
+                    "id": task.id,
+                    "agent_id": task.agent_id,
+                    "task_id": task.task_id,
+                    "command": task.command,
+                    "status": task.status,
+                    "created_at": task.created_at,
+                    "started_at": task.started_at,
+                    "completed_at": task.completed_at,
+                    "exit_code": task.exit_code,
+                    "output": task.output,
+                    "error": task.error,
+                    "logs": json.loads(task.logs) if task.logs else []
+                }
+                for task in tasks
+            ]
+        finally:
+            session.close()
+    
+    def cleanup_offline_agents(self, timeout_minutes: int = 2):
+        """Mark agents as offline if they haven't sent heartbeat"""
+        session = self.get_session()
+        try:
+            timeout_threshold = datetime.utcnow() - timedelta(minutes=timeout_minutes)
+            offline_agents = session.query(Agent).filter(
+                Agent.is_active == True,
+                Agent.last_heartbeat < timeout_threshold,
+                Agent.status == "online"
+            ).all()
+            
+            for agent in offline_agents:
+                agent.status = "offline"
+            
+            session.commit()
+            return len(offline_agents)
+        finally:
+            session.close()
+
+# Initialize database manager
+db_manager = DatabaseManager() 

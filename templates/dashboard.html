@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Remote Agent Manager{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Agents Table -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    Registered Agents
+                </h5>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="refreshAgents()">
+                        <i class="fas fa-sync-alt me-1"></i>
+                        Refresh
+                    </button>
+                    <span class="badge bg-success ms-2" id="online-count">0</span>
+                    <span class="badge bg-secondary ms-1" id="total-count">0</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="agents-table">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Status</th>
+                                <th>Hostname</th>
+                                <th>IP Address</th>
+                                <th>Port</th>
+                                <th>Capabilities</th>
+                                <th>Last Heartbeat</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agents-tbody">
+                            <!-- Agents will be loaded here dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Command Panel -->
+    <div class="col-lg-4">
+        <div class="card" id="command-panel" style="display: none;">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-terminal me-2"></i>
+                    Send Command
+                </h5>
+                <small class="text-muted" id="selected-agent-info"></small>
+            </div>
+            <div class="card-body">
+                <form id="command-form">
+                    <div class="mb-3">
+                        <label for="command" class="form-label">Command</label>
+                        <textarea class="form-control" id="command" rows="3" placeholder="Enter command to execute..." required></textarea>
+                        <div class="form-text">
+                            <small class="text-muted">
+                                <strong>Examples:</strong><br>
+                                <span id="command-examples">Loading examples...</span>
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="shell-type" class="form-label">Shell Type</label>
+                                <select class="form-select" id="shell-type" required>
+                                    <option value="bash">Bash</option>
+                                    <option value="cmd">CMD</option>
+                                    <option value="powershell">PowerShell</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="timeout" class="form-label">Timeout (seconds)</label>
+                                <input type="number" class="form-control" id="timeout" value="30" min="1" max="300">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>
+                            Send Command
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="hideCommandPanel()">
+                            <i class="fas fa-times me-2"></i>
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Task Results -->
+        <div class="card mt-3" id="task-results" style="display: none;">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-tasks me-2"></i>
+                    Task Results
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="task-status"></div>
+                <div id="task-output"></div>
+                <div id="task-error"></div>
+            </div>
+        </div>
+
+        <!-- System Status -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    System Status
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h4 class="text-success" id="online-agents-count">0</h4>
+                            <small class="text-muted">Online</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-secondary" id="offline-agents-count">0</h4>
+                        <small class="text-muted">Offline</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Command Modal for Results -->
+<div class="modal fade" id="commandModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-terminal me-2"></i>
+                    Command Results
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modal-task-status"></div>
+                <div id="modal-task-output"></div>
+                <div id="modal-task-error"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedAgentId = null;
+let currentTaskId = null;
+
+// Initialize dashboard
+$(document).ready(function() {
+    loadAgents();
+    setInterval(loadAgents, 10000); // Refresh every 10 seconds
+});
+
+// Load agents from API
+function loadAgents() {
+    $.get('/api/agents', function(data) {
+        updateAgentsTable(data.agents);
+        updateStatusCounts(data);
+    }).fail(function() {
+        $('#connection-status').text('Disconnected').removeClass('text-success').addClass('text-danger');
+    });
+}
+
+// Update agents table
+function updateAgentsTable(agents) {
+    const tbody = $('#agents-tbody');
+    tbody.empty();
+    
+    agents.forEach(agent => {
+        const statusClass = agent.status === 'online' ? 'success' : 'secondary';
+        const statusIcon = agent.status === 'online' ? 'fa-circle' : 'fa-circle';
+        
+        const row = `
+            <tr class="agent-row" data-agent-id="${agent.agent_id}">
+                <td>
+                    <i class="fas ${statusIcon} text-${statusClass}"></i>
+                    <span class="badge bg-${statusClass} ms-1">${agent.status}</span>
+                </td>
+                <td><strong>${agent.hostname}</strong></td>
+                <td>${agent.ip_address}</td>
+                <td>${agent.port}</td>
+                <td>
+                    ${agent.capabilities.map(cap => `<span class="badge bg-info me-1">${cap}</span>`).join('')}
+                </td>
+                <td>
+                    <small class="text-muted">
+                        ${new Date(agent.last_heartbeat).toLocaleString()}
+                    </small>
+                </td>
+                <td>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-primary" onclick="selectAgent('${agent.agent_id}', '${agent.hostname}')" ${agent.status !== 'online' ? 'disabled' : ''}>
+                            <i class="fas fa-terminal me-1"></i>
+                            Command
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="unregisterAgent('${agent.agent_id}', '${agent.hostname}')" title="Unregister agent">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+        tbody.append(row);
+    });
+}
+
+// Update status counts
+function updateStatusCounts(data) {
+    $('#online-count').text(data.online);
+    $('#offline-count').text(data.offline);
+    $('#online-agents-count').text(data.online);
+    $('#offline-agents-count').text(data.offline);
+    $('#total-count').text(data.total);
+}
+
+// Select agent for command
+function selectAgent(agentId, hostname) {
+    selectedAgentId = agentId;
+    $('#selected-agent-info').text(`Selected: ${hostname} (${agentId})`);
+    $('#command-panel').show();
+    $('#command').focus();
+    updateCommandExamples();
+}
+
+// Update command examples based on shell type
+function updateCommandExamples() {
+    const shellType = $('#shell-type').val();
+    let examples = '';
+    
+    switch(shellType) {
+        case 'cmd':
+            examples = 'dir C:\\<br>whoami<br>hostname<br>systeminfo';
+            break;
+        case 'powershell':
+            examples = 'Get-ChildItem C:\\<br>Get-Process<br>whoami<br>$env:COMPUTERNAME';
+            break;
+        case 'bash':
+            examples = 'ls /<br>whoami<br>hostname<br>ps aux';
+            break;
+    }
+    
+    $('#command-examples').html(examples);
+}
+
+// Update examples when shell type changes
+$('#shell-type').change(function() {
+    updateCommandExamples();
+});
+
+// Hide command panel
+function hideCommandPanel() {
+    $('#command-panel').hide();
+    $('#task-results').hide();
+    selectedAgentId = null;
+    currentTaskId = null;
+}
+
+// Refresh agents
+function refreshAgents() {
+    loadAgents();
+}
+
+// Unregister agent
+function unregisterAgent(agentId, hostname) {
+    if (confirm(`Are you sure you want to unregister agent "${hostname}"? This action cannot be undone.`)) {
+        $.ajax({
+            url: `/api/agents/${agentId}`,
+            method: 'DELETE',
+            success: function(response) {
+                showNotification(`Agent "${hostname}" unregistered successfully`, 'success');
+                loadAgents(); // Refresh the table
+            },
+            error: function(xhr) {
+                showNotification(`Failed to unregister agent: ${xhr.responseText}`, 'error');
+            }
+        });
+    }
+}
+
+// Handle command form submission
+$('#command-form').submit(function(e) {
+    e.preventDefault();
+    
+    if (!selectedAgentId) {
+        alert('Please select an agent first');
+        return;
+    }
+    
+    const commandData = {
+        command: $('#command').val(),
+        shell_type: $('#shell-type').val(),
+        timeout: parseInt($('#timeout').val())
+    };
+    
+    // Send command
+    $.ajax({
+        url: `/api/agents/${selectedAgentId}/commands`,
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(commandData),
+        success: function(response) {
+            currentTaskId = response.task_id;
+            $('#task-results').show();
+            $('#task-status').html(`
+                <div class="alert alert-info">
+                    <i class="fas fa-clock me-2"></i>
+                    Task submitted: ${currentTaskId}
+                </div>
+            `);
+            
+            // Start polling for results
+            pollTaskStatus();
+        },
+        error: function(xhr) {
+            alert('Error sending command: ' + xhr.responseText);
+        }
+    });
+});
+
+// Poll task status
+function pollTaskStatus() {
+    if (!currentTaskId || !selectedAgentId) return;
+    
+    $.get(`/api/agents/${selectedAgentId}/tasks/${currentTaskId}`, function(task) {
+        updateTaskDisplay(task);
+        
+        // Continue polling if task is still running
+        if (task.status === 'pending' || task.status === 'running') {
+            setTimeout(pollTaskStatus, 2000);
+        }
+    }).fail(function() {
+        $('#task-status').html(`
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Error fetching task status
+            </div>
+        `);
+    });
+}
+
+// Update task display
+function updateTaskDisplay(task) {
+    let statusClass = 'info';
+    let statusIcon = 'clock';
+    
+    if (task.status === 'completed') {
+        statusClass = 'success';
+        statusIcon = 'check-circle';
+    } else if (task.status === 'failed') {
+        statusClass = 'danger';
+        statusIcon = 'exclamation-triangle';
+    } else if (task.status === 'running') {
+        statusClass = 'warning';
+        statusIcon = 'play-circle';
+    }
+    
+    $('#task-status').html(`
+        <div class="alert alert-${statusClass}">
+            <i class="fas fa-${statusIcon} me-2"></i>
+            Status: ${task.status.toUpperCase()}
+            ${task.exit_code !== null ? `(Exit: ${task.exit_code})` : ''}
+        </div>
+    `);
+    
+    if (task.output) {
+        $('#task-output').html(`
+            <h6>Output:</h6>
+            <pre class="bg-light p-2 rounded">${task.output}</pre>
+        `);
+    }
+    
+    if (task.error) {
+        $('#task-error').html(`
+            <h6>Error:</h6>
+            <pre class="bg-danger text-white p-2 rounded">${task.error}</pre>
+        `);
+    }
+    
+    if (task.logs && task.logs.length > 0) {
+        $('#task-output').append(`
+            <h6>Logs:</h6>
+            <pre class="bg-light p-2 rounded">${task.logs.join('\n')}</pre>
+        `);
+    }
+}
+</script>
+{% endblock %} 

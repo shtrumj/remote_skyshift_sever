@@ -72,6 +72,17 @@ class TaskStatus(BaseModel):
     error: Optional[str] = None
     logs: List[str] = []
 
+class CustomerRegistration(BaseModel):
+    name: str
+    address: Optional[str] = None
+
+class CustomerResponse(BaseModel):
+    uuid: str
+    name: str
+    address: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
 class AgentCommandRequest(BaseModel):
     agent_id: str
     command_request: CommandRequest
@@ -255,6 +266,12 @@ async def dashboard(request: Request):
     """Main dashboard page"""
     return templates.TemplateResponse("dashboard.html", {"request": request})
 
+# Customers endpoint
+@app.get("/customers", response_class=HTMLResponse)
+async def customers_page(request: Request):
+    """Customers management page"""
+    return templates.TemplateResponse("customers.html", {"request": request})
+
 # API root endpoint
 @app.get("/api")
 def api_root():
@@ -332,6 +349,76 @@ async def unregister_agent(agent_id: str):
     else:
         logger.error(f"❌ Failed to unregister agent: {agent_id}")
         raise HTTPException(status_code=404, detail="Agent not found")
+
+# Customer management endpoints
+@app.post("/api/customers")
+async def create_customer(customer: CustomerRegistration):
+    """Create a new customer"""
+    try:
+        customer_data = {
+            "id": str(uuid.uuid4()),
+            "uuid": str(uuid.uuid4()),
+            "name": customer.name,
+            "address": customer.address
+        }
+        
+        customer_uuid = db_manager.create_customer(customer_data)
+        logger.info(f"👤 Customer created: {customer.name} ({customer_uuid})")
+        
+        return {"uuid": customer_uuid, "message": "Customer created successfully"}
+    except Exception as e:
+        logger.error(f"❌ Customer creation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Customer creation failed: {str(e)}")
+
+@app.get("/api/customers")
+async def list_customers():
+    """List all customers"""
+    try:
+        customers = db_manager.get_all_customers()
+        return {"customers": customers, "total": len(customers)}
+    except Exception as e:
+        logger.error(f"❌ Failed to list customers: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to list customers: {str(e)}")
+
+@app.get("/api/customers/{customer_uuid}")
+async def get_customer(customer_uuid: str):
+    """Get specific customer"""
+    customer = db_manager.get_customer(customer_uuid)
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return customer
+
+@app.put("/api/customers/{customer_uuid}")
+async def update_customer(customer_uuid: str, customer: CustomerRegistration):
+    """Update customer information"""
+    try:
+        updates = {"name": customer.name}
+        if customer.address is not None:
+            updates["address"] = customer.address
+        
+        success = db_manager.update_customer(customer_uuid, updates)
+        if success:
+            logger.info(f"👤 Customer updated: {customer.name} ({customer_uuid})")
+            return {"message": "Customer updated successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Customer not found")
+    except Exception as e:
+        logger.error(f"❌ Customer update failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Customer update failed: {str(e)}")
+
+@app.delete("/api/customers/{customer_uuid}")
+async def delete_customer(customer_uuid: str):
+    """Delete a customer"""
+    try:
+        success = db_manager.delete_customer(customer_uuid)
+        if success:
+            logger.info(f"🗑️ Customer deleted: {customer_uuid}")
+            return {"message": "Customer deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Customer not found")
+    except Exception as e:
+        logger.error(f"❌ Customer deletion failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Customer deletion failed: {str(e)}")
 
 # Command execution endpoints
 @app.post("/api/agents/{agent_id}/commands")

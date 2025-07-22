@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}Customers - Remote Agent Manager{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Customer Registration Form -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-plus me-2"></i>
+                    Register New Customer
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="customer-form">
+                    <div class="mb-3">
+                        <label for="customer-name" class="form-label">Customer Name *</label>
+                        <input type="text" class="form-control" id="customer-name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="customer-address" class="form-label">Address (Optional)</label>
+                        <textarea class="form-control" id="customer-address" rows="3" placeholder="Enter customer address..."></textarea>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            Register Customer
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="clearCustomerForm()">
+                            <i class="fas fa-times me-2"></i>
+                            Clear Form
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customers Table -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-users me-2"></i>
+                    Registered Customers
+                </h5>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadCustomers()">
+                        <i class="fas fa-sync-alt me-1"></i>
+                        Refresh
+                    </button>
+                    <span class="badge bg-primary ms-2" id="customers-count">0</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="customers-table">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>UUID</th>
+                                <th>Name</th>
+                                <th>Address</th>
+                                <th>Created</th>
+                                <th>Updated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customers-tbody">
+                            <!-- Customers will be loaded here dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Customer Modal -->
+<div class="modal fade" id="editCustomerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>
+                    Edit Customer
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-customer-form">
+                    <input type="hidden" id="edit-customer-uuid">
+                    <div class="mb-3">
+                        <label for="edit-customer-name" class="form-label">Customer Name *</label>
+                        <input type="text" class="form-control" id="edit-customer-name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit-customer-address" class="form-label">Address (Optional)</label>
+                        <textarea class="form-control" id="edit-customer-address" rows="3" placeholder="Enter customer address..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="updateCustomer()">
+                    <i class="fas fa-save me-2"></i>
+                    Update Customer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize customers page
+$(document).ready(function() {
+    loadCustomers();
+});
+
+// Load customers from API
+function loadCustomers() {
+    $.get('/api/customers', function(data) {
+        updateCustomersTable(data.customers);
+        $('#customers-count').text(data.total);
+    }).fail(function() {
+        showNotification('Failed to load customers', 'error');
+    });
+}
+
+// Update customers table
+function updateCustomersTable(customers) {
+    const tbody = $('#customers-tbody');
+    tbody.empty();
+    
+    customers.forEach(customer => {
+        const address = customer.address || '<em class="text-muted">No address</em>';
+        const created = new Date(customer.created_at).toLocaleDateString();
+        const updated = new Date(customer.updated_at).toLocaleDateString();
+        
+        const row = `
+            <tr class="customer-row" data-customer-uuid="${customer.uuid}">
+                <td><code>${customer.uuid}</code></td>
+                <td><strong>${customer.name}</strong></td>
+                <td>${address}</td>
+                <td><small class="text-muted">${created}</small></td>
+                <td><small class="text-muted">${updated}</small></td>
+                <td>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editCustomer('${customer.uuid}', '${customer.name}', '${customer.address || ''}')" title="Edit customer">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCustomer('${customer.uuid}', '${customer.name}')" title="Delete customer">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+        tbody.append(row);
+    });
+}
+
+// Handle customer form submission
+$('#customer-form').submit(function(e) {
+    e.preventDefault();
+    
+    const customerData = {
+        name: $('#customer-name').val().trim(),
+        address: $('#customer-address').val().trim() || null
+    };
+    
+    if (!customerData.name) {
+        showNotification('Customer name is required', 'error');
+        return;
+    }
+    
+    // Create customer
+    $.ajax({
+        url: '/api/customers',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(customerData),
+        success: function(response) {
+            showNotification(`Customer "${customerData.name}" registered successfully`, 'success');
+            clearCustomerForm();
+            loadCustomers(); // Refresh the table
+        },
+        error: function(xhr) {
+            showNotification(`Failed to register customer: ${xhr.responseText}`, 'error');
+        }
+    });
+});
+
+// Clear customer form
+function clearCustomerForm() {
+    $('#customer-form')[0].reset();
+    $('#customer-name').focus();
+}
+
+// Edit customer
+function editCustomer(uuid, name, address) {
+    $('#edit-customer-uuid').val(uuid);
+    $('#edit-customer-name').val(name);
+    $('#edit-customer-address').val(address);
+    $('#editCustomerModal').modal('show');
+}
+
+// Update customer
+function updateCustomer() {
+    const uuid = $('#edit-customer-uuid').val();
+    const name = $('#edit-customer-name').val().trim();
+    const address = $('#edit-customer-address').val().trim() || null;
+    
+    if (!name) {
+        showNotification('Customer name is required', 'error');
+        return;
+    }
+    
+    const customerData = { name, address };
+    
+    $.ajax({
+        url: `/api/customers/${uuid}`,
+        method: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify(customerData),
+        success: function(response) {
+            showNotification(`Customer "${name}" updated successfully`, 'success');
+            $('#editCustomerModal').modal('hide');
+            loadCustomers(); // Refresh the table
+        },
+        error: function(xhr) {
+            showNotification(`Failed to update customer: ${xhr.responseText}`, 'error');
+        }
+    });
+}
+
+// Delete customer
+function deleteCustomer(uuid, name) {
+    if (confirm(`Are you sure you want to delete customer "${name}"? This action cannot be undone.`)) {
+        $.ajax({
+            url: `/api/customers/${uuid}`,
+            method: 'DELETE',
+            success: function(response) {
+                showNotification(`Customer "${name}" deleted successfully`, 'success');
+                loadCustomers(); // Refresh the table
+            },
+            error: function(xhr) {
+                showNotification(`Failed to delete customer: ${xhr.responseText}`, 'error');
+            }
+        });
+    }
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+    const alertClass = type === 'success' ? 'alert-success' : 
+                      type === 'error' ? 'alert-danger' : 'alert-info';
+    
+    const notification = $(`
+        <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
+             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+    
+    $('body').append(notification);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(function() {
+        notification.alert('close');
+    }, 5000);
+}
+</script>
+{% endblock %} 

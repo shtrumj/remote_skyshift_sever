@@ -46,13 +46,14 @@
 
     <!-- Command Panel -->
     <div class="col-lg-4">
-        <div class="card" id="command-panel" style="display: none;">
+        <div class="card resizable-panel" id="command-panel" style="display: none;">
             <div class="card-header">
                 <h5 class="mb-0">
                     <i class="fas fa-terminal me-2"></i>
                     Send Command
                 </h5>
                 <small class="text-muted" id="selected-agent-info"></small>
+                <div class="panel-height" id="command-panel-height"></div>
             </div>
             <div class="card-body">
                 <form id="command-form">
@@ -98,21 +99,24 @@
                     </div>
                 </form>
             </div>
+            <div class="resize-handle"></div>
         </div>
 
         <!-- Task Results -->
-        <div class="card mt-3" id="task-results" style="display: none;">
+        <div class="card mt-3 resizable-panel" id="task-results" style="display: none;">
             <div class="card-header">
                 <h6 class="mb-0">
                     <i class="fas fa-tasks me-2"></i>
                     Task Results
                 </h6>
+                <div class="panel-height" id="task-results-height"></div>
             </div>
             <div class="card-body">
                 <div id="task-status"></div>
                 <div id="task-output"></div>
                 <div id="task-error"></div>
             </div>
+            <div class="resize-handle"></div>
         </div>
 
         <!-- System Status -->
@@ -408,5 +412,45 @@ function updateTaskDisplay(task) {
         `);
     }
 }
+
+// Resizable panel functionality
+function initializeResizablePanels() {
+    // Update height indicators
+    function updateHeightIndicator(panelId, heightId) {
+        const panel = document.getElementById(panelId);
+        const heightIndicator = document.getElementById(heightId);
+        if (panel && heightIndicator) {
+            const height = panel.offsetHeight;
+            heightIndicator.textContent = `${height}px`;
+        }
+    }
+    
+    // Initialize height indicators
+    updateHeightIndicator('command-panel', 'command-panel-height');
+    updateHeightIndicator('task-results', 'task-results-height');
+    
+    // Add resize observers
+    const commandPanel = document.getElementById('command-panel');
+    const taskResults = document.getElementById('task-results');
+    
+    if (commandPanel) {
+        const resizeObserver = new ResizeObserver(() => {
+            updateHeightIndicator('command-panel', 'command-panel-height');
+        });
+        resizeObserver.observe(commandPanel);
+    }
+    
+    if (taskResults) {
+        const resizeObserver = new ResizeObserver(() => {
+            updateHeightIndicator('task-results', 'task-results-height');
+        });
+        resizeObserver.observe(taskResults);
+    }
+}
+
+// Initialize resizable panels when document is ready
+$(document).ready(function() {
+    initializeResizablePanels();
+});
 </script>
 {% endblock %} 

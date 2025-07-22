@@ -47,6 +47,17 @@ class Task(Base):
     error = Column(Text, nullable=True)
     logs = Column(Text, nullable=True)  # JSON string
 
+class Customer(Base):
+    """Customer model"""
+    __tablename__ = "customers"
+    
+    id = Column(String, primary_key=True, index=True)
+    uuid = Column(String, unique=True, index=True)
+    name = Column(String, nullable=False)
+    address = Column(Text, nullable=True)  # Optional address
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 class DatabaseManager:
     """Database manager for agent and task operations"""
     
@@ -340,6 +351,108 @@ class DatabaseManager:
             
             session.commit()
             return len(offline_agents)
+        finally:
+            session.close()
+    
+    # Customer management methods
+    def create_customer(self, customer_data: dict) -> str:
+        """Create a new customer"""
+        session = self.get_session()
+        try:
+            customer = Customer(
+                id=customer_data["id"],
+                uuid=customer_data["uuid"],
+                name=customer_data["name"],
+                address=customer_data.get("address")
+            )
+            session.add(customer)
+            session.commit()
+            return customer.uuid
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+    
+    def get_customer(self, customer_uuid: str) -> Optional[dict]:
+        """Get customer by UUID"""
+        session = self.get_session()
+        try:
+            customer = session.query(Customer).filter(
+                Customer.uuid == customer_uuid
+            ).first()
+            
+            if customer:
+                return {
+                    "id": customer.id,
+                    "uuid": customer.uuid,
+                    "name": customer.name,
+                    "address": customer.address,
+                    "created_at": customer.created_at.isoformat(),
+                    "updated_at": customer.updated_at.isoformat()
+                }
+            return None
+        finally:
+            session.close()
+    
+    def get_all_customers(self) -> List[dict]:
+        """Get all customers"""
+        session = self.get_session()
+        try:
+            customers = session.query(Customer).order_by(Customer.created_at.desc()).all()
+            return [
+                {
+                    "id": customer.id,
+                    "uuid": customer.uuid,
+                    "name": customer.name,
+                    "address": customer.address,
+                    "created_at": customer.created_at.isoformat(),
+                    "updated_at": customer.updated_at.isoformat()
+                }
+                for customer in customers
+            ]
+        finally:
+            session.close()
+    
+    def update_customer(self, customer_uuid: str, updates: dict) -> bool:
+        """Update customer information"""
+        session = self.get_session()
+        try:
+            customer = session.query(Customer).filter(
+                Customer.uuid == customer_uuid
+            ).first()
+            
+            if customer:
+                if "name" in updates:
+                    customer.name = updates["name"]
+                if "address" in updates:
+                    customer.address = updates["address"]
+                customer.updated_at = datetime.utcnow()
+                session.commit()
+                return True
+            return False
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+    
+    def delete_customer(self, customer_uuid: str) -> bool:
+        """Delete customer by UUID"""
+        session = self.get_session()
+        try:
+            customer = session.query(Customer).filter(
+                Customer.uuid == customer_uuid
+            ).first()
+            
+            if customer:
+                session.delete(customer)
+                session.commit()
+                return True
+            return False
+        except Exception as e:
+            session.rollback()
+            raise e
         finally:
             session.close()
 

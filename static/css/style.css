@@ -295,3 +295,58 @@ pre {
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+
+/* Resizable panels */
+.resizable-panel {
+  position: relative;
+  min-height: 200px;
+  resize: vertical;
+  overflow: auto;
+}
+
+.resizable-panel .card-body {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.resize-handle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  cursor: ns-resize;
+  border-radius: 0 0 10px 10px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.resizable-panel:hover .resize-handle {
+  opacity: 1;
+}
+
+.resize-handle:hover {
+  opacity: 1 !important;
+}
+
+/* Command panel resizable */
+#command-panel.resizable-panel {
+  min-height: 300px;
+  max-height: 600px;
+}
+
+#task-results.resizable-panel {
+  min-height: 200px;
+  max-height: 500px;
+}
+
+/* Panel height indicators */
+.panel-height {
+  position: absolute;
+  top: 5px;
+  right: 10px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  pointer-events: none;
+}

@@ -1,7 +1,7 @@
 """
 SQLite Database Module for Agent Registration
 """
-from sqlalchemy import create_engine, Column, String, DateTime, Integer, Text, Boolean
+from sqlalchemy import create_engine, Column, String, DateTime, Integer, Text, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timedelta
@@ -29,6 +29,7 @@ class Agent(Base):
     last_heartbeat = Column(DateTime, default=datetime.utcnow)
     status = Column(String, default="online")
     is_active = Column(Boolean, default=True)
+    customer_uuid = Column(String, nullable=True)
 
 class Task(Base):
     """Task execution model"""
@@ -57,6 +58,20 @@ class Customer(Base):
     address = Column(Text, nullable=True)  # Optional address
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class Script(Base):
+    __tablename__ = "scripts"
+    
+    id = Column(String, primary_key=True)
+    script_id = Column(String, unique=True, nullable=False)
+    name = Column(String, nullable=False)
+    description = Column(String)
+    content = Column(Text, nullable=False)
+    script_type = Column(String, nullable=False)  # cmd, powershell, bash
+    customer_uuid = Column(String, ForeignKey("customers.uuid"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_active = Column(Boolean, default=True)
 
 class DatabaseManager:
     """Database manager for agent and task operations"""
@@ -93,6 +108,7 @@ class DatabaseManager:
                 existing_agent.last_heartbeat = datetime.utcnow()
                 existing_agent.status = "online"
                 existing_agent.is_active = True
+                existing_agent.customer_uuid = agent_data.get("customer_uuid")
                 session.commit()
                 return existing_agent.agent_id
             else:
@@ -108,7 +124,8 @@ class DatabaseManager:
                     registered_at=datetime.utcnow(),
                     last_heartbeat=datetime.utcnow(),
                     status="online",
-                    is_active=True
+                    is_active=True,
+                    customer_uuid=agent_data.get("customer_uuid")
                 )
                 session.add(agent)
                 session.commit()
@@ -146,7 +163,8 @@ class DatabaseManager:
                     "version": agent.version,
                     "registered_at": agent.registered_at,
                     "last_heartbeat": agent.last_heartbeat,
-                    "status": agent.status
+                    "status": agent.status,
+                    "customer_uuid": agent.customer_uuid
                 }
             return None
         finally:
@@ -170,7 +188,8 @@ class DatabaseManager:
                     "version": agent.version,
                     "registered_at": agent.registered_at,
                     "last_heartbeat": agent.last_heartbeat,
-                    "status": agent.status
+                    "status": agent.status,
+                    "customer_uuid": agent.customer_uuid
                 }
             return None
         finally:
@@ -207,7 +226,8 @@ class DatabaseManager:
                     "version": agent.version,
                     "registered_at": agent.registered_at,
                     "last_heartbeat": agent.last_heartbeat,
-                    "status": agent.status
+                    "status": agent.status,
+                    "customer_uuid": agent.customer_uuid
                 }
                 for agent in agents
             ]
@@ -453,6 +473,150 @@ class DatabaseManager:
         except Exception as e:
             session.rollback()
             raise e
+        finally:
+            session.close()
+    
+    # Script Management Methods
+    def create_script(self, script_data: dict) -> str:
+        """Create a new script"""
+        session = self.get_session()
+        try:
+            script = Script(**script_data)
+            session.add(script)
+            session.commit()
+            session.refresh(script)
+            return script.script_id
+        except Exception as e:
+            session.rollback()
+            print(f"❌ Error creating script: {e}")
+            raise
+        finally:
+            session.close()
+    
+    def get_all_scripts(self) -> List[dict]:
+        """Get all active scripts"""
+        session = self.get_session()
+        try:
+            scripts = session.query(Script).filter(Script.is_active == True).all()
+            return [
+                {
+                    "id": script.id,
+                    "script_id": script.script_id,
+                    "name": script.name,
+                    "description": script.description,
+                    "content": script.content,
+                    "script_type": script.script_type,
+                    "customer_uuid": script.customer_uuid,
+                    "created_at": script.created_at,
+                    "updated_at": script.updated_at
+                }
+                for script in scripts
+            ]
+        except Exception as e:
+            print(f"❌ Error getting scripts: {e}")
+            return []
+        finally:
+            session.close()
+    
+    def get_script(self, script_id: str) -> Optional[dict]:
+        """Get a specific script"""
+        session = self.get_session()
+        try:
+            script = session.query(Script).filter(
+                Script.script_id == script_id,
+                Script.is_active == True
+            ).first()
+            
+            if script:
+                return {
+                    "id": script.id,
+                    "script_id": script.script_id,
+                    "name": script.name,
+                    "description": script.description,
+                    "content": script.content,
+                    "script_type": script.script_type,
+                    "customer_uuid": script.customer_uuid,
+                    "created_at": script.created_at,
+                    "updated_at": script.updated_at
+                }
+            return None
+        except Exception as e:
+            print(f"❌ Error getting script: {e}")
+            return None
+        finally:
+            session.close()
+    
+    def update_script(self, script_id: str, updates: dict) -> bool:
+        """Update a script"""
+        session = self.get_session()
+        try:
+            script = session.query(Script).filter(
+                Script.script_id == script_id,
+                Script.is_active == True
+            ).first()
+            
+            if script:
+                for key, value in updates.items():
+                    if hasattr(script, key):
+                        setattr(script, key, value)
+                script.updated_at = datetime.utcnow()
+                session.commit()
+                return True
+            return False
+        except Exception as e:
+            session.rollback()
+            print(f"❌ Error updating script: {e}")
+            return False
+        finally:
+            session.close()
+    
+    def delete_script(self, script_id: str) -> bool:
+        """Soft delete a script"""
+        session = self.get_session()
+        try:
+            script = session.query(Script).filter(
+                Script.script_id == script_id,
+                Script.is_active == True
+            ).first()
+            
+            if script:
+                script.is_active = False
+                session.commit()
+                return True
+            return False
+        except Exception as e:
+            session.rollback()
+            print(f"❌ Error deleting script: {e}")
+            return False
+        finally:
+            session.close()
+    
+    def get_scripts_by_customer(self, customer_uuid: str) -> List[dict]:
+        """Get scripts assigned to a specific customer"""
+        session = self.get_session()
+        try:
+            scripts = session.query(Script).filter(
+                Script.customer_uuid == customer_uuid,
+                Script.is_active == True
+            ).all()
+            
+            return [
+                {
+                    "id": script.id,
+                    "script_id": script.script_id,
+                    "name": script.name,
+                    "description": script.description,
+                    "content": script.content,
+                    "script_type": script.script_type,
+                    "customer_uuid": script.customer_uuid,
+                    "created_at": script.created_at,
+                    "updated_at": script.updated_at
+                }
+                for script in scripts
+            ]
+        except Exception as e:
+            print(f"❌ Error getting scripts by customer: {e}")
+            return []
         finally:
             session.close()
 

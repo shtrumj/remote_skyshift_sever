@@ -3,6 +3,14 @@
 body {
   background-color: #f8f9fa;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+/* Main dashboard layout */
+.dashboard-container {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
 }
 
 /* Card styling */
@@ -349,4 +357,99 @@ pre {
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.7);
   pointer-events: none;
+}
+
+/* Draggable and window controls - FIXED VERSION */
+.draggable-panel {
+  position: fixed !important;
+  z-index: 1050;
+  min-width: 350px;
+  min-height: 150px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  background: white;
+  border-radius: 10px;
+  transition: box-shadow 0.2s;
+  /* Ensure panels stay within viewport bounds */
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 40px);
+}
+
+.draggable-panel .card-header {
+  cursor: move;
+  user-select: none;
+  position: relative;
+}
+
+.panel-controls {
+  position: absolute;
+  top: 8px;
+  right: 16px;
+  z-index: 2;
+  display: flex;
+  gap: 6px;
+}
+
+.panel-btn {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: #333;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.panel-btn:hover {
+  background: #bdbdbd;
+}
+
+.minimized {
+  height: 40px !important;
+  min-height: 40px !important;
+  overflow: hidden !important;
+}
+
+.maximized {
+  width: 98vw !important;
+  height: 90vh !important;
+  left: 1vw !important;
+  top: 5vh !important;
+  min-width: unset !important;
+  min-height: unset !important;
+  z-index: 2000 !important;
+}
+
+/* Ensure main dashboard content doesn't shift */
+.row {
+  position: relative;
+  z-index: 1;
+}
+
+.col-lg-8,
+.col-lg-4 {
+  position: relative;
+  z-index: 1;
+}
+
+/* Panel positioning constraints */
+.draggable-panel {
+  /* Prevent panels from going off-screen */
+  left: max(20px, min(calc(100vw - 370px), left)) !important;
+  top: max(20px, min(calc(100vh - 170px), top)) !important;
+}
+
+/* Ensure panels don't interfere with main layout */
+.draggable-panel:not(.maximized) {
+  pointer-events: auto;
+}
+
+/* Add some spacing when panels are visible */
+.dashboard-container.has-panels {
+  padding-bottom: 20px;
 }

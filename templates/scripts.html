@@ -1,0 +1,601 @@
+{% extends "base.html" %}
+
+{% block title %}Script Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Script Upload Form -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-upload"></i> Upload Script</h5>
+                </div>
+                <div class="card-body">
+                    <form id="scriptUploadForm">
+                        <div class="mb-3">
+                            <label for="scriptName" class="form-label">Script Name</label>
+                            <input type="text" class="form-control" id="scriptName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="scriptDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="scriptDescription" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="scriptType" class="form-label">Script Type</label>
+                            <select class="form-control" id="scriptType" required>
+                                <option value="cmd">Windows CMD</option>
+                                <option value="powershell">Windows PowerShell</option>
+                                <option value="bash">Linux/Mac Bash</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="scriptCustomer" class="form-label">Assign to Customer (Optional)</label>
+                            <select class="form-control" id="scriptCustomer">
+                                <option value="">No Customer</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="scriptContent" class="form-label">Script Content</label>
+                            <div class="d-flex gap-2 mb-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleUploadMode()">
+                                    <i class="fas fa-upload"></i> Upload File
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleTextMode()">
+                                    <i class="fas fa-edit"></i> Text Editor
+                                </button>
+                            </div>
+                            <textarea class="form-control" id="scriptContent" rows="10" required placeholder="Enter your script content here..."></textarea>
+                            <input type="file" id="scriptFile" class="form-control mt-2" style="display: none;" accept=".cmd,.bat,.ps1,.sh,.bash,.txt">
+                            <small class="form-text text-muted">Supported formats: .cmd, .bat, .ps1, .sh, .bash, .txt</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="saveScriptBtn">
+                            <i class="fas fa-save"></i> Save Script
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Script Library -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-code"></i> Script Library</h5>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="filterScripts('all')">All</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="filterScripts('cmd')">CMD</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="filterScripts('powershell')">PowerShell</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="filterScripts('bash')">Bash</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="scriptsList">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Execution Modal -->
+    <div class="modal fade" id="scriptExecutionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Execute Script</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="executionAgent" class="form-label">Select Agent</label>
+                        <select class="form-control" id="executionAgent" required>
+                            <option value="">Choose an agent...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="scriptParameters" class="form-label">Parameters (Optional)</label>
+                        <textarea class="form-control" id="scriptParameters" rows="3" placeholder='{"param1": "value1", "param2": "value2"}'></textarea>
+                        <small class="form-text text-muted">JSON format for script parameters</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Script Preview</label>
+                        <pre id="scriptPreview" class="bg-light p-3 rounded"></pre>
+                    </div>
+                    
+                    <!-- Execution Results Section -->
+                    <div id="executionResults" style="display: none;">
+                        <hr>
+                        <h6 class="mb-3">
+                            <i class="fas fa-terminal"></i> Execution Results
+                        </h6>
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <div id="executionStatus" class="alert alert-info">
+                                <i class="fas fa-spinner fa-spin"></i> Executing...
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Output</label>
+                            <pre id="executionOutput" class="bg-dark text-light p-3 rounded" style="max-height: 300px; overflow-y: auto;"></pre>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Error (if any)</label>
+                            <pre id="executionError" class="bg-danger text-light p-3 rounded" style="max-height: 200px; overflow-y: auto; display: none;"></pre>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Exit Code</label>
+                            <span id="executionExitCode" class="badge bg-secondary">-</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="executeScriptBtn" onclick="executeScript()">
+                        <i class="fas fa-play"></i> Execute Script
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let scripts = [];
+let customers = [];
+let selectedScript = null;
+
+// Load data on page load
+$(document).ready(function() {
+    console.log('Scripts page loaded');
+    loadScripts();
+    loadCustomers();
+    loadAgents();
+    
+    // Test form submission
+    console.log('Form element:', $('#scriptUploadForm').length);
+    $('#scriptUploadForm').on('submit', function(e) {
+        console.log('Form submit event triggered');
+    });
+    
+    // Backup click handler for save button
+    $('#saveScriptBtn').on('click', function(e) {
+        console.log('Save button clicked');
+        e.preventDefault();
+        $('#scriptUploadForm').submit();
+    });
+});
+
+// Load scripts
+function loadScripts() {
+    $.get('/api/scripts')
+        .done(function(data) {
+            scripts = data.scripts;
+            displayScripts(scripts);
+        })
+        .fail(function(xhr) {
+            showAlert('Error loading scripts: ' + xhr.responseText, 'danger');
+        });
+}
+
+// Load customers for assignment
+function loadCustomers() {
+    $.get('/api/customers')
+        .done(function(data) {
+            customers = data.customers;
+            const select = $('#scriptCustomer');
+            select.empty().append('<option value="">No Customer</option>');
+            customers.forEach(customer => {
+                select.append(`<option value="${customer.uuid}">${customer.name}</option>`);
+            });
+        })
+        .fail(function(xhr) {
+            console.error('Error loading customers:', xhr.responseText);
+        });
+}
+
+// Load agents for execution
+function loadAgents() {
+    $.get('/api/agents')
+        .done(function(data) {
+            const select = $('#executionAgent');
+            select.empty().append('<option value="">Choose an agent...</option>');
+            data.agents.forEach(agent => {
+                if (agent.status === 'online') {
+                    select.append(`<option value="${agent.agent_id}">${agent.hostname} (${agent.ip_address})</option>`);
+                }
+            });
+        })
+        .fail(function(xhr) {
+            console.error('Error loading agents:', xhr.responseText);
+        });
+}
+
+// Display scripts
+function displayScripts(scriptsToShow) {
+    const container = $('#scriptsList');
+    
+    if (scriptsToShow.length === 0) {
+        container.html('<div class="text-center text-muted">No scripts found</div>');
+        return;
+    }
+    
+    let html = '';
+    scriptsToShow.forEach(script => {
+        const customer = customers.find(c => c.uuid === script.customer_uuid);
+        const customerName = customer ? customer.name : 'No Customer';
+        
+        html += `
+            <div class="card mb-3 script-card" data-type="${script.script_type}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="card-title">${script.name}</h6>
+                            <p class="card-text text-muted">${script.description || 'No description'}</p>
+                            <div class="mb-2">
+                                <span class="badge bg-primary">${script.script_type.toUpperCase()}</span>
+                                <span class="badge bg-secondary">${customerName}</span>
+                            </div>
+                        </div>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-outline-primary" onclick="executeScriptModal('${script.script_id}')">
+                                <i class="fas fa-play"></i> Execute
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="viewScript('${script.script_id}')">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteScript('${script.script_id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.html(html);
+}
+
+// Filter scripts by type
+function filterScripts(type) {
+    if (type === 'all') {
+        displayScripts(scripts);
+    } else {
+        const filtered = scripts.filter(script => script.script_type === type);
+        displayScripts(filtered);
+    }
+}
+
+// Script upload form submission
+$('#scriptUploadForm').submit(function(e) {
+    e.preventDefault();
+    console.log('Form submitted!');
+    
+    // Validate required fields
+    const name = $('#scriptName').val().trim();
+    const content = $('#scriptContent').val().trim();
+    const scriptType = $('#scriptType').val();
+    
+    if (!name) {
+        showAlert('Script name is required!', 'warning');
+        $('#scriptName').focus();
+        return;
+    }
+    
+    if (!content) {
+        showAlert('Script content is required!', 'warning');
+        $('#scriptContent').focus();
+        return;
+    }
+    
+    if (!scriptType) {
+        showAlert('Script type is required!', 'warning');
+        $('#scriptType').focus();
+        return;
+    }
+    
+    const scriptData = {
+        name: name,
+        description: $('#scriptDescription').val().trim(),
+        script_type: scriptType,
+        content: content,
+        customer_uuid: $('#scriptCustomer').val() || null
+    };
+    
+    console.log('Script data:', scriptData);
+    
+    // Show loading state
+    $('#saveScriptBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+    
+    $.ajax({
+        url: '/api/scripts',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(scriptData),
+        success: function(response) {
+            console.log('Script created successfully:', response);
+            showAlert('Script created successfully!', 'success');
+            $('#scriptUploadForm')[0].reset();
+            loadScripts();
+        },
+        error: function(xhr, status, error) {
+            console.error('Error creating script:', xhr.responseText, status, error);
+            showAlert('Error creating script: ' + xhr.responseText, 'danger');
+        },
+        complete: function() {
+            // Reset button state
+            $('#saveScriptBtn').prop('disabled', false).html('<i class="fas fa-save"></i> Save Script');
+        }
+    });
+});
+
+// Execute script modal
+function executeScriptModal(scriptId) {
+    selectedScript = scripts.find(s => s.script_id === scriptId);
+    if (!selectedScript) return;
+    
+    $('#scriptPreview').text(selectedScript.content);
+    $('#scriptParameters').val('');
+    $('#executionAgent').val('');
+    
+    // Reset execution results
+    $('#executionResults').hide();
+    $('#executionStatus').html('<i class="fas fa-spinner fa-spin"></i> Executing...');
+    $('#executionOutput').text('');
+    $('#executionError').hide().text('');
+    $('#executionExitCode').text('-').removeClass('bg-success bg-danger bg-warning').addClass('bg-secondary');
+    $('#executeScriptBtn').prop('disabled', false);
+    
+    const modal = new bootstrap.Modal(document.getElementById('scriptExecutionModal'));
+    modal.show();
+}
+
+// Execute script
+function executeScript() {
+    const agentId = $('#executionAgent').val();
+    const parametersText = $('#scriptParameters').val();
+    
+    if (!agentId) {
+        showAlert('Please select an agent', 'warning');
+        return;
+    }
+    
+    let parameters = null;
+    if (parametersText.trim()) {
+        try {
+            parameters = JSON.parse(parametersText);
+        } catch (e) {
+            showAlert('Invalid JSON format for parameters', 'danger');
+            return;
+        }
+    }
+    
+    const executionData = {
+        agent_id: agentId,
+        parameters: parameters
+    };
+    
+    // Show execution results section
+    $('#executionResults').show();
+    $('#executionStatus').html('<i class="fas fa-spinner fa-spin"></i> Executing...');
+    $('#executionOutput').text('');
+    $('#executionError').hide().text('');
+    $('#executionExitCode').text('-').removeClass('bg-success bg-danger bg-warning').addClass('bg-secondary');
+    $('#executeScriptBtn').prop('disabled', true);
+    
+    $.ajax({
+        url: `/api/scripts/${selectedScript.script_id}/execute`,
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(executionData),
+        success: function(response) {
+            console.log('Script execution started:', response);
+            $('#executionStatus').html('<i class="fas fa-clock"></i> Executing...');
+            
+            // Start polling for results
+            pollTaskResults(response.task_id, agentId);
+        },
+        error: function(xhr) {
+            console.error('Script execution failed:', xhr.responseText);
+            $('#executionStatus').html('<i class="fas fa-exclamation-triangle"></i> Execution failed');
+            $('#executionError').show().text('Error: ' + xhr.responseText);
+            $('#executeScriptBtn').prop('disabled', false);
+        }
+    });
+}
+
+// Poll for task results
+function pollTaskResults(taskId, agentId) {
+    const maxAttempts = 30; // 30 seconds
+    let attempts = 0;
+    
+    const poll = () => {
+        attempts++;
+        
+        $.ajax({
+            url: `/api/agents/${agentId}/tasks/${taskId}`,
+            method: 'GET',
+            success: function(response) {
+                console.log('Task result:', response);
+                
+                if (response.status === 'completed') {
+                    // Task completed
+                    $('#executionStatus').html('<i class="fas fa-check-circle"></i> Completed');
+                    
+                    // Display output
+                    if (response.output) {
+                        $('#executionOutput').text(response.output);
+                    } else {
+                        $('#executionOutput').text('(No output)');
+                    }
+                    
+                    // Display error if any
+                    if (response.error) {
+                        $('#executionError').show().text(response.error);
+                    }
+                    
+                    // Display exit code
+                    const exitCode = response.exit_code;
+                    $('#executionExitCode').text(exitCode);
+                    if (exitCode === 0) {
+                        $('#executionExitCode').removeClass('bg-secondary bg-danger bg-warning').addClass('bg-success');
+                    } else if (exitCode > 0) {
+                        $('#executionExitCode').removeClass('bg-secondary bg-success bg-warning').addClass('bg-danger');
+                    } else {
+                        $('#executionExitCode').removeClass('bg-secondary bg-success bg-danger').addClass('bg-warning');
+                    }
+                    
+                    $('#executeScriptBtn').prop('disabled', false);
+                    
+                } else if (response.status === 'pending' || response.status === 'running') {
+                    // Still running, continue polling
+                    if (attempts < maxAttempts) {
+                        setTimeout(poll, 1000);
+                    } else {
+                        $('#executionStatus').html('<i class="fas fa-clock"></i> Timeout - no response after 30 seconds');
+                        $('#executeScriptBtn').prop('disabled', false);
+                    }
+                } else {
+                    // Unknown status
+                    $('#executionStatus').html('<i class="fas fa-question-circle"></i> Unknown status: ' + response.status);
+                    $('#executeScriptBtn').prop('disabled', false);
+                }
+            },
+            error: function(xhr) {
+                console.error('Failed to get task result:', xhr.responseText);
+                if (attempts < maxAttempts) {
+                    setTimeout(poll, 1000);
+                } else {
+                    $('#executionStatus').html('<i class="fas fa-exclamation-triangle"></i> Failed to get results');
+                    $('#executeScriptBtn').prop('disabled', false);
+                }
+            }
+        });
+    };
+    
+    // Start polling
+    poll();
+}
+
+// View script details
+function viewScript(scriptId) {
+    const script = scripts.find(s => s.script_id === scriptId);
+    if (!script) return;
+    
+    const modal = `
+        <div class="modal fade" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${script.name}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <strong>Description:</strong>
+                            <p>${script.description || 'No description'}</p>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Type:</strong> ${script.script_type.toUpperCase()}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Content:</strong>
+                            <pre class="bg-light p-3 rounded">${script.content}</pre>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    $(modal).modal('show');
+}
+
+// Delete script
+function deleteScript(scriptId) {
+    if (!confirm('Are you sure you want to delete this script?')) return;
+    
+    $.ajax({
+        url: `/api/scripts/${scriptId}`,
+        method: 'DELETE',
+        success: function(response) {
+            showAlert('Script deleted successfully!', 'success');
+            loadScripts();
+        },
+        error: function(xhr) {
+            showAlert('Error deleting script: ' + xhr.responseText, 'danger');
+        }
+    });
+}
+
+// Show alert
+function showAlert(message, type) {
+    const alert = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    $('.container-fluid').prepend(alert);
+    
+    setTimeout(() => {
+        $('.alert').alert('close');
+    }, 5000);
+}
+
+// File upload functionality
+function toggleUploadMode() {
+    $('#scriptContent').hide();
+    $('#scriptFile').show();
+    $('#scriptFile').focus();
+    console.log('Switched to upload mode');
+}
+
+function toggleTextMode() {
+    $('#scriptFile').hide();
+    $('#scriptContent').show();
+    $('#scriptContent').focus();
+    console.log('Switched to text mode');
+}
+
+// Handle file upload
+$('#scriptFile').change(function() {
+    const file = this.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        $('#scriptContent').val(e.target.result);
+        
+        // Auto-detect script type based on file extension
+        const fileName = file.name.toLowerCase();
+        if (fileName.endsWith('.cmd') || fileName.endsWith('.bat')) {
+            $('#scriptType').val('cmd');
+        } else if (fileName.endsWith('.ps1')) {
+            $('#scriptType').val('powershell');
+        } else if (fileName.endsWith('.sh') || fileName.endsWith('.bash')) {
+            $('#scriptType').val('bash');
+        }
+        
+        // Auto-fill script name if empty
+        if (!$('#scriptName').val()) {
+            $('#scriptName').val(file.name.replace(/\.[^/.]+$/, ""));
+        }
+        
+        showAlert('File loaded successfully!', 'success');
+    };
+    reader.readAsText(file);
+});
+</script>
+{% endblock %} 

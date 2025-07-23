@@ -1,73 +1,79 @@
-# Rust Client HTTP Configuration Fix
+# Rust Client Fix for WebSocket Command Output
 
-## Problem
-Your Rust client is trying to connect to `https://remote.skyshift.dev:4433` (HTTPS) but the server is running on HTTP, causing SSL certificate validation errors.
+## Issue
+The Rust client is failing with:
+```
+called `Result::unwrap()` on an `Err` value: Error("missing field `task_id`", line: 0, column: 0)
+```
 
-## Solution: Change to HTTP
+## Root Cause
+The server is now sending `task_id` in the command data, but the Rust client's `CommandRequest` struct doesn't include this field.
 
-### 1. Update Registration URL
-In your Rust client code, change:
+## Fix
+
+### 1. Update CommandRequest struct
+Add the `task_id` field to your `CommandRequest` struct:
+
 ```rust
-// OLD (causing SSL errors)
-let registration_url = std::env::var("REGISTRATION_URL")
-    .unwrap_or_else(|_| "https://remote.skyshift.dev:4433".to_string());
-
-// NEW (use HTTP)
-let registration_url = std::env::var("REGISTRATION_URL")
-    .unwrap_or_else(|_| "http://remote.skyshift.dev:4433".to_string());
+#[derive(Debug, Deserialize)]
+pub struct CommandRequest {
+    pub command: String,
+    pub shell_type: String,
+    pub timeout: Option<u64>,
+    pub working_directory: Option<String>,
+    pub environment: Option<std::collections::HashMap<String, String>>,
+    pub task_id: Option<String>,  // Add this field
+}
 ```
 
-### 2. Environment Variable (Optional)
-You can also set the environment variable:
-```bash
-export REGISTRATION_URL="http://remote.skyshift.dev:4433"
+### 2. Update command execution
+Use the task_id from the server instead of generating a new one:
+
+```rust
+async fn execute_command(&self, request: CommandRequest) -> TaskResult {
+    // Use the task_id from the server, or generate a new one if not provided
+    let task_id = request.task_id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    
+    log::info!("🔧 Executing command: {} (shell: {}) with task_id: {}", 
+               request.command, request.shell_type, task_id);
+    
+    // ... rest of your command execution logic
+}
 ```
 
-### 3. Verify Connection
-Test the connection with curl:
-```bash
-curl -X GET "http://remote.skyshift.dev:4433/health"
-# Should return: {"status":"healthy","timestamp":"...","agents":{"total":0,"online":0,"offline":0}}
+### 3. Send task result back via WebSocket
+Make sure your task result includes the correct task_id:
+
+```rust
+async fn handle_command(&self, command_data: serde_json::Value) {
+    let command_request: CommandRequest = serde_json::from_value(command_data).unwrap();
+    
+    log::info!("🔧 Executing command: {}", command_request.command);
+    
+    // Execute command
+    let result = self.execute_command(command_request).await;
+    
+    // Send result back via WebSocket
+    let task_result = serde_json::json!({
+        "type": "task_result",
+        "data": result
+    });
+    
+    // Send the result back to the server
+    if let Err(e) = self.websocket.send(Message::Text(task_result.to_string())).await {
+        log::error!("❌ Failed to send task result: {}", e);
+    } else {
+        log::info!("📤 Task result sent successfully");
+    }
+}
 ```
 
-## Expected Behavior After Fix
+## Testing
+After making these changes:
 
-1. **Registration**: `POST http://remote.skyshift.dev:4433/api/agents/register`
-2. **Heartbeat**: `POST http://remote.skyshift.dev:4433/api/agents/{agent_id}/heartbeat`
-3. **Commands**: `POST http://remote.skyshift.dev:4433/api/agents/{agent_id}/commands`
+1. Rebuild your Rust client
+2. Restart the agent
+3. Send a command from the web dashboard
+4. Check that the command output appears in the task results panel
 
-## Server Status
-✅ **Server is running**: `http://remote.skyshift.dev:4433`  
-✅ **Health endpoint**: Working correctly  
-✅ **Agent registration**: Ready to accept clients  
-✅ **Command tunneling**: Functional  
-
-## Debugging Tips
-
-If you still have issues after changing to HTTP:
-
-1. **Check network connectivity**:
-   ```bash
-   curl -v http://remote.skyshift.dev:4433/health
-   ```
-
-2. **Verify your Rust client logs**:
-   - Look for `INFO` messages about successful registration
-   - Check for any remaining SSL/TLS errors
-
-3. **Test with a simple HTTP client**:
-   ```bash
-   curl -X POST "http://remote.skyshift.dev:4433/api/agents/register" \
-     -H "Content-Type: application/json" \
-     -d '{"hostname":"test","ip_address":"192.168.1.100","port":3000,"capabilities":["bash"],"version":"1.0.0"}'
-   ```
-
-## Key Changes Summary
-
-| Component | Old URL | New URL |
-|-----------|---------|---------|
-| Registration | `https://remote.skyshift.dev:4433` | `http://remote.skyshift.dev:4433` |
-| Heartbeat | `https://remote.skyshift.dev:4433` | `http://remote.skyshift.dev:4433` |
-| Commands | `https://remote.skyshift.dev:4433` | `http://remote.skyshift.dev:4433` |
-
-After making this change, your Rust client should connect successfully without SSL certificate errors. 
+The server should now receive the task result with the correct task_id and display the actual command output instead of the mock message. 

@@ -74,7 +74,11 @@ function setupKeyboardShortcuts() {
     // Ctrl+R to refresh
     if (e.ctrlKey && e.key === "r") {
       e.preventDefault();
-      refreshAgents();
+      if (typeof refreshAgents === "function") {
+        refreshAgents();
+      } else {
+        location.reload();
+      }
     }
 
     // Escape to hide command panel
@@ -302,7 +306,14 @@ function debounce(func, wait) {
 }
 
 // Debounced refresh function
-const debouncedRefresh = debounce(refreshAgents, 1000);
+const debouncedRefresh = debounce(function () {
+  if (typeof refreshAgents === "function") {
+    refreshAgents();
+  } else {
+    // Fallback: reload the page if refreshAgents is not available
+    location.reload();
+  }
+}, 1000);
 
 // Add right-click context menu for agents
 $(document).on("contextmenu", ".agent-row", function (e) {

@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - Remote Agent Manager{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-edit me-2"></i>User Profile
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="profile-alert"></div>
+                    
+                    <form id="profileForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="username" class="form-label">
+                                        <i class="fas fa-user me-1"></i>Username
+                                    </label>
+                                    <input type="text" class="form-control" id="username" name="username" readonly>
+                                    <small class="text-muted">Username cannot be changed</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">
+                                        <i class="fas fa-envelope me-1"></i>Email
+                                    </label>
+                                    <input type="email" class="form-control" id="email" name="email" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="full_name" class="form-label">
+                                        <i class="fas fa-id-card me-1"></i>Full Name
+                                    </label>
+                                    <input type="text" class="form-control" id="full_name" name="full_name">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="status" class="form-label">
+                                        <i class="fas fa-circle me-1"></i>Status
+                                    </label>
+                                    <input type="text" class="form-control" id="status" name="status" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="created_at" class="form-label">
+                                        <i class="fas fa-calendar me-1"></i>Member Since
+                                    </label>
+                                    <input type="text" class="form-control" id="created_at" name="created_at" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="last_login" class="form-label">
+                                        <i class="fas fa-clock me-1"></i>Last Login
+                                    </label>
+                                    <input type="text" class="form-control" id="last_login" name="last_login" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <h6 class="mb-3">
+                            <i class="fas fa-lock me-1"></i>Change Password
+                        </h6>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="current_password" class="form-label">Current Password</label>
+                                    <input type="password" class="form-control" id="current_password" name="current_password">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="new_password" class="form-label">New Password</label>
+                                    <input type="password" class="form-control" id="new_password" name="new_password">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="confirm_password" class="form-label">Confirm New Password</label>
+                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary" id="updateProfileBtn">
+                                <i class="fas fa-save me-1"></i>Update Profile
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="changePasswordBtn">
+                                <i class="fas fa-key me-1"></i>Change Password
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="loadProfile()">
+                                <i class="fas fa-sync-alt me-1"></i>Refresh
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Account Statistics -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Account Statistics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div class="border-end">
+                                <h4 id="total-logins">0</h4>
+                                <small class="text-muted">Total Logins</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <h4 id="session-time">0h</h4>
+                            <small class="text-muted">Session Time</small>
+                        </div>
+                        <div class="col-md-3">
+                            <h4 id="commands-sent">0</h4>
+                            <small class="text-muted">Commands Sent</small>
+                        </div>
+                        <div class="col-md-3">
+                            <h4 id="scripts-created">0</h4>
+                            <small class="text-muted">Scripts Created</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    loadProfile();
+    
+    // Update profile
+    $('#updateProfileBtn').click(function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            email: $('#email').val(),
+            full_name: $('#full_name').val()
+        };
+        
+        $.ajax({
+            url: '/api/users/profile',
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function(response) {
+                showAlert('Profile updated successfully!', 'success');
+                loadProfile();
+            },
+            error: function(xhr) {
+                showAlert('Failed to update profile: ' + (xhr.responseJSON?.detail || 'Unknown error'), 'danger');
+            }
+        });
+    });
+    
+    // Change password
+    $('#changePasswordBtn').click(function(e) {
+        e.preventDefault();
+        
+        const currentPassword = $('#current_password').val();
+        const newPassword = $('#new_password').val();
+        const confirmPassword = $('#confirm_password').val();
+        
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            showAlert('Please fill in all password fields', 'warning');
+            return;
+        }
+        
+        if (newPassword !== confirmPassword) {
+            showAlert('New passwords do not match', 'warning');
+            return;
+        }
+        
+        if (newPassword.length < 6) {
+            showAlert('Password must be at least 6 characters long', 'warning');
+            return;
+        }
+        
+        const formData = {
+            current_password: currentPassword,
+            new_password: newPassword
+        };
+        
+        $.ajax({
+            url: '/api/users/change-password',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function(response) {
+                showAlert('Password changed successfully!', 'success');
+                $('#current_password').val('');
+                $('#new_password').val('');
+                $('#confirm_password').val('');
+            },
+            error: function(xhr) {
+                showAlert('Failed to change password: ' + (xhr.responseJSON?.detail || 'Unknown error'), 'danger');
+            }
+        });
+    });
+});
+
+function loadProfile() {
+    $.ajax({
+        url: '/api/users/profile',
+        method: 'GET',
+        success: function(user) {
+            $('#username').val(user.username);
+            $('#email').val(user.email);
+            $('#full_name').val(user.full_name || '');
+            $('#status').val(user.is_active ? 'Active' : 'Inactive');
+            $('#created_at').val(new Date(user.created_at).toLocaleDateString());
+            $('#last_login').val(user.last_login ? new Date(user.last_login).toLocaleString() : 'Never');
+            
+            // Load statistics (placeholder data for now)
+            $('#total-logins').text(user.total_logins || 0);
+            $('#session-time').text(user.session_time || '0h');
+            $('#commands-sent').text(user.commands_sent || 0);
+            $('#scripts-created').text(user.scripts_created || 0);
+        },
+        error: function(xhr) {
+            showAlert('Failed to load profile: ' + (xhr.responseJSON?.detail || 'Unknown error'), 'danger');
+        }
+    });
+}
+
+function showAlert(message, type) {
+    const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    $('#profile-alert').html(alertHtml);
+}
+</script>
+{% endblock %} 

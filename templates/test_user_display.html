@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test User Display</title>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  </head>
+  <body>
+    <h1>Test User Display</h1>
+    <div id="user-info">Loading...</div>
+    <div id="debug-info"></div>
+
+    <script>
+      function testUserDisplay() {
+        console.log("🔍 Testing user display...");
+
+        // Check if we have cookies
+        console.log("🔍 Document cookies:", document.cookie);
+
+        // Test the API call
+        $.ajax({
+          url: "/api/users/profile",
+          method: "GET",
+          xhrFields: { withCredentials: true },
+          success: function (user) {
+            console.log("✅ User data received:", user);
+            $("#user-info").html(`
+                        <h2>User Information</h2>
+                        <p><strong>Username:</strong> ${user.username}</p>
+                        <p><strong>Email:</strong> ${user.email}</p>
+                        <p><strong>Admin:</strong> ${user.is_admin}</p>
+                        <p><strong>Active:</strong> ${user.is_active}</p>
+                    `);
+
+            // Test updating the navbar
+            $("#debug-info").html(`
+                        <h3>Debug Info</h3>
+                        <p>User element would be updated to: ${user.username}</p>
+                        <p>Admin status: ${user.is_admin}</p>
+                    `);
+          },
+          error: function (xhr, status, error) {
+            console.log("❌ Error loading user:", xhr.status, error);
+            $("#user-info").html(`
+                        <h2>Error</h2>
+                        <p><strong>Status:</strong> ${xhr.status}</p>
+                        <p><strong>Error:</strong> ${error}</p>
+                        <p><strong>Response:</strong> ${xhr.responseText}</p>
+                    `);
+          },
+        });
+      }
+
+      // Test when page loads
+      $(document).ready(function () {
+        console.log("🚀 Test page loaded");
+        testUserDisplay();
+      });
+    </script>
+  </body>
+</html>

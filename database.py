@@ -73,6 +73,23 @@ class Script(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
 
+class User(Base):
+    """User model for authentication"""
+    __tablename__ = "users"
+    
+    id = Column(String, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    full_name = Column(String, nullable=True)
+    hashed_password = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True)
+    is_admin = Column(Boolean, default=False)
+    is_approved = Column(Boolean, default=False)
+    approved_by = Column(String, nullable=True)  # Admin who approved
+    approved_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 class DatabaseManager:
     """Database manager for agent and task operations"""
     
@@ -617,6 +634,287 @@ class DatabaseManager:
         except Exception as e:
             print(f"❌ Error getting scripts by customer: {e}")
             return []
+        finally:
+            session.close()
+
+    # User management methods
+    def create_user(self, user_data: dict) -> str:
+        """Create a new user"""
+        session = self.get_session()
+        try:
+            # Check if user already exists
+            existing_user = session.query(User).filter(
+                (User.username == user_data["username"]) | 
+                (User.email == user_data["email"])
+            ).first()
+            
+            if existing_user:
+                raise ValueError("User with this username or email already exists")
+            
+            user = User(
+                id=user_data["id"],
+                username=user_data["username"],
+                email=user_data["email"],
+                full_name=user_data.get("full_name"),
+                hashed_password=user_data["hashed_password"],
+                is_active=user_data.get("is_active", True),
+                is_admin=user_data.get("is_admin", False),
+                is_approved=user_data.get("is_approved", False)
+            )
+            
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+            return user.id
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+    
+    def get_user_by_username(self, username: str) -> Optional[dict]:
+        """Get user by username"""
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.username == username).first()
+            if user:
+                return {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "full_name": user.full_name,
+                    "is_active": user.is_active,
+                    "is_admin": user.is_admin,
+                    "is_approved": user.is_approved,
+                    "approved_by": user.approved_by,
+                    "approved_at": user.approved_at.isoformat() if user.approved_at else None,
+                    "created_at": user.created_at.isoformat(),
+                    "updated_at": user.updated_at.isoformat()
+                }
+            return None
+        except Exception as e:
+            print(f"Error getting user by username: {e}")
+            return None
+        finally:
+            session.close()
+    
+    def get_user_by_email(self, email: str) -> Optional[dict]:
+        """Get user by email"""
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.email == email).first()
+            if user:
+                return {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "full_name": user.full_name,
+                    "is_active": user.is_active,
+                    "is_admin": user.is_admin,
+                    "is_approved": user.is_approved,
+                    "approved_by": user.approved_by,
+                    "approved_at": user.approved_at.isoformat() if user.approved_at else None,
+                    "created_at": user.created_at.isoformat(),
+                    "updated_at": user.updated_at.isoformat()
+                }
+            return None
+        except Exception as e:
+            print(f"Error getting user by email: {e}")
+            return None
+        finally:
+            session.close()
+    
+    def get_user_with_password(self, username: str) -> Optional[dict]:
+        """Get user with password hash for authentication"""
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.username == username).first()
+            if user:
+                return {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "full_name": user.full_name,
+                    "hashed_password": user.hashed_password,
+                    "is_active": user.is_active,
+                    "is_admin": user.is_admin,
+                    "is_approved": user.is_approved,
+                    "approved_by": user.approved_by,
+                    "approved_at": user.approved_at.isoformat() if user.approved_at else None,
+                    "created_at": user.created_at.isoformat(),
+                    "updated_at": user.updated_at.isoformat()
+                }
+            return None
+        except Exception as e:
+            print(f"Error getting user with password: {e}")
+            return None
+        finally:
+            session.close()
+    
+    def get_all_users(self) -> List[dict]:
+        """Get all users"""
+        session = self.get_session()
+        try:
+            users = session.query(User).all()
+            return [
+                {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "full_name": user.full_name,
+                    "is_active": user.is_active,
+                    "is_admin": user.is_admin,
+                    "is_approved": user.is_approved,
+                    "approved_by": user.approved_by,
+                    "approved_at": user.approved_at.isoformat() if user.approved_at else None,
+                    "created_at": user.created_at.isoformat(),
+                    "updated_at": user.updated_at.isoformat()
+                }
+                for user in users
+            ]
+        except Exception as e:
+            print(f"Error getting all users: {e}")
+            return []
+        finally:
+            session.close()
+    
+    def update_user(self, user_id: str, updates: dict) -> bool:
+        """Update user information"""
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.id == user_id).first()
+            if not user:
+                return False
+            
+            for key, value in updates.items():
+                if hasattr(user, key):
+                    setattr(user, key, value)
+            
+            user.updated_at = datetime.utcnow()
+            session.commit()
+            return True
+        except Exception as e:
+            session.rollback()
+            print(f"Error updating user: {e}")
+            return False
+        finally:
+            session.close()
+    
+    def delete_user(self, user_id: str) -> bool:
+        """Delete a user"""
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.id == user_id).first()
+            if not user:
+                return False
+            
+            session.delete(user)
+            session.commit()
+            return True
+        except Exception as e:
+            session.rollback()
+            print(f"Error deleting user: {e}")
+            return False
+        finally:
+            session.close()
+    
+    def get_pending_users(self) -> List[dict]:
+        """Get all users waiting for approval"""
+        session = self.get_session()
+        try:
+            users = session.query(User).filter(
+                User.is_approved == False,
+                User.is_active == True
+            ).all()
+            return [
+                {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "full_name": user.full_name,
+                    "is_active": user.is_active,
+                    "is_admin": user.is_admin,
+                    "is_approved": user.is_approved,
+                    "approved_by": user.approved_by,
+                    "approved_at": user.approved_at.isoformat() if user.approved_at else None,
+                    "created_at": user.created_at.isoformat(),
+                    "updated_at": user.updated_at.isoformat()
+                }
+                for user in users
+            ]
+        except Exception as e:
+            print(f"Error getting pending users: {e}")
+            return []
+        finally:
+            session.close()
+    
+    def approve_user(self, user_id: str, approved_by: str) -> bool:
+        """Approve a user"""
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.id == user_id).first()
+            if user:
+                user.is_approved = True
+                user.approved_by = approved_by
+                user.approved_at = datetime.utcnow()
+                session.commit()
+                return True
+            return False
+        except Exception as e:
+            session.rollback()
+            print(f"Error approving user: {e}")
+            return False
+        finally:
+            session.close()
+    
+    def reject_user(self, user_id: str) -> bool:
+        """Reject a user (deactivate)"""
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.id == user_id).first()
+            if user:
+                user.is_active = False
+                session.commit()
+                return True
+            return False
+        except Exception as e:
+            session.rollback()
+            print(f"Error rejecting user: {e}")
+            return False
+        finally:
+            session.close()
+    
+    def make_admin(self, user_id: str) -> bool:
+        """Make a user an admin"""
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.id == user_id).first()
+            if user:
+                user.is_admin = True
+                session.commit()
+                return True
+            return False
+        except Exception as e:
+            session.rollback()
+            print(f"Error making user admin: {e}")
+            return False
+        finally:
+            session.close()
+    
+    def remove_admin(self, user_id: str) -> bool:
+        """Remove admin privileges from a user"""
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.id == user_id).first()
+            if user:
+                user.is_admin = False
+                session.commit()
+                return True
+            return False
+        except Exception as e:
+            session.rollback()
+            print(f"Error removing admin privileges: {e}")
+            return False
         finally:
             session.close()
 

@@ -21,6 +21,11 @@ function initializeApp() {
 
   // Setup keyboard shortcuts
   setupKeyboardShortcuts();
+
+  // Load current user information
+  console.log("🔍 About to call loadCurrentUser()");
+  loadCurrentUser();
+  console.log("🔍 loadCurrentUser() called");
 }
 
 // Start auto-refresh functionality
@@ -28,7 +33,17 @@ function startAutoRefresh() {
   // Refresh every 10 seconds
   refreshInterval = setInterval(function () {
     if (isConnected) {
-      loadAgents();
+      // Only call loadAgents if it exists (dashboard pages)
+      if (typeof loadAgents === "function") {
+        loadAgents();
+      }
+      // For admin dashboard, refresh admin data
+      if (
+        typeof AdminDashboard !== "undefined" &&
+        typeof AdminDashboard.loadAdminDashboard === "function"
+      ) {
+        AdminDashboard.loadAdminDashboard();
+      }
     }
   }, 10000);
 }
@@ -350,6 +365,55 @@ $(document).on("contextmenu", ".agent-row", function (e) {
     $(".dropdown-menu.show").remove();
   });
 });
+
+// Load current user information
+function loadCurrentUser() {
+  console.log("🔍 loadCurrentUser() called");
+  console.log("🔍 Making AJAX request to /api/users/profile");
+
+  $.ajax({
+    url: "/api/users/profile",
+    method: "GET",
+    xhrFields: {
+      withCredentials: true,
+    },
+    success: function (user) {
+      console.log("✅ AJAX success - user data:", user);
+
+      // Update the current user display in the navigation
+      $("#current-user").text(user.username);
+      console.log(`👤 Updated current user display to: ${user.username}`);
+
+      // Also update the page title if it's generic
+      if (document.title === "Remote Agent Manager") {
+        document.title = `Remote Agent Manager - ${user.username}`;
+      }
+
+      // Show admin link if user is admin
+      if (user.is_admin) {
+        $("#admin-nav-item").show();
+        console.log("👑 Showing admin nav item");
+      }
+
+      console.log(`👤 Current user loaded: ${user.username}`);
+    },
+    error: function (xhr, status, error) {
+      console.log("❌ AJAX error - status:", xhr.status);
+      console.log("❌ AJAX error - status text:", xhr.statusText);
+      console.log("❌ AJAX error - response:", xhr.responseText);
+      console.log("❌ AJAX error - error:", error);
+
+      // If not authenticated, redirect to login
+      if (xhr.status === 401) {
+        console.log("🔒 User not authenticated, redirecting to login");
+        window.location.href = "/ui/login";
+      } else {
+        console.log("⚠️ Failed to load current user:", xhr.status);
+        // Keep showing "User" as fallback
+      }
+    },
+  });
+}
 
 // Console logging for debugging
 console.log("📡 Remote Agent Manager JavaScript loaded");

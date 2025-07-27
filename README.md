@@ -1,344 +1,219 @@
 # Remote Agent Manager
 
-A modern, real-time remote agent management system with WebSocket-based full-duplex communication, designed for managing distributed computing agents across networks.
+A secure, scalable remote agent management system with SSL/TLS support for managing distributed agents across networks.
 
-## 🚀 Features
+## 🚀 Quick Start
 
-### Core Features
-- **Real-time Communication**: WebSocket-based full-duplex communication between server and agents
-- **Automatic Fallback**: HTTP fallback for agents without WebSocket support
-- **Customer Management**: Organize agents by customers with UUID-based registration
-- **Real-time Command Execution**: Send commands and receive live updates
-- **Interactive UI**: Draggable, resizable command and result panels
-- **Agent Health Monitoring**: Automatic heartbeat and connection status tracking
-- **Multi-shell Support**: CMD, PowerShell, and Bash command execution
-- **Network Resilience**: Handles network connectivity issues gracefully
+### 1. Start Both Servers (HTTP + HTTPS) - **RECOMMENDED**
+```bash
+python run_servers.py
+```
 
-### Advanced Features
-- **WebSocket Priority**: Commands sent via WebSocket for instant delivery
-- **HTTP Fallback**: Automatic fallback to HTTP for legacy agents
-- **Connection Status**: Real-time display of WebSocket vs HTTP connections
-- **Task Management**: Real-time task status updates and result streaming
-- **Customer Filtering**: Filter agents by customer name
-- **Agent Deduplication**: Automatic removal of duplicate registrations
+This will:
+- Start HTTP server on port 4433 (for internal debugging)
+- Start HTTPS server on port 4434 (for secure production use)
+- Automatically generate SSL certificates if needed
+- Handle dual server management and graceful shutdown
 
-## 🏗️ Architecture
+### 2. Access the Application
+- **HTTP (Internal)**: http://localhost:4433
+- **HTTPS (Secure)**: https://localhost:4434
 
-### Server (Python/FastAPI)
-- **WebSocket Server**: Real-time bidirectional communication
-- **HTTP API**: RESTful endpoints for agent management
-- **SQLite Database**: Persistent storage for agents, tasks, and customers
-- **Background Tasks**: Automatic cleanup of offline agents
-- **Connection Manager**: Manages WebSocket connections and agent mapping
+## 📁 Project Structure
 
-### Client (Rust)
-- **WebSocket Client**: Maintains persistent connection to server
-- **HTTP Server**: Fallback command execution endpoint
-- **Command Executor**: Multi-shell command execution
-- **Heartbeat System**: Regular status updates to server
-- **Customer Registration**: UUID-based customer association
+```
+Remote Agent Manager/
+├── main.py                           # Main FastAPI application
+├── run_servers.py                    # Dual server launcher (HTTP + HTTPS)
+├── database.py                       # Database management
+├── templates/                        # HTML templates
+│   ├── base.html
+│   ├── dashboard.html
+│   ├── customers.html
+│   └── scripts.html
+├── static/                          # Static assets (CSS, JS)
+├── Testing/                         # Testing and development tools
+│   ├── test_websocket_agent.py     # WebSocket agent test
+│   ├── server.py                    # Alternative server implementation
+│   └── start_server.py             # Legacy server starter
+├── CertificateConfiguration/        # SSL/TLS certificate management
+│   ├── generate_certificates.py    # Certificate generator
+│   ├── SSL_SETUP.md               # SSL setup documentation
+│   └── certs/                     # SSL certificates
+│       ├── server.crt
+│       └── server.key
+└── README.md                       # This file
+```
 
-## 📋 Prerequisites
+## 🔧 Server Options
 
-### Server Requirements
-- Python 3.8+
-- FastAPI
-- Uvicorn
-- SQLAlchemy
-- Pydantic
+### Option 1: Both Servers (Recommended) - **USE THIS**
+```bash
+python run_servers.py
+```
+- HTTP: http://localhost:4433
+- HTTPS: https://localhost:4434
+- **Handles certificate generation automatically**
+- **Manages dual server processes**
 
-### Client Requirements
-- Rust 1.70+
-- Tokio (async runtime)
-- Actix-web (HTTP server)
-- Tungstenite (WebSocket client)
-
-## 🛠️ Installation
-
-### Server Setup
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd Inventory
-   ```
-
-2. **Create virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install fastapi uvicorn sqlalchemy pydantic python-multipart
-   ```
-
-4. **Run the server**
-   ```bash
-   python main.py
-   ```
-
-The server will start on `http://0.0.0.0:4433`
-
-### Client Setup
-
-1. **Create new Rust project**
-   ```bash
-   cargo new remote_agent_client
-   cd remote_agent_client
-   ```
-
-2. **Add dependencies to `Cargo.toml`**
-   ```toml
-   [package]
-   name = "remote_agent_client"
-   version = "0.1.0"
-   edition = "2021"
-
-   [dependencies]
-   tokio = { version = "1.0", features = ["full"] }
-   actix-web = "4.0"
-   actix-rt = "2.0"
-   serde = { version = "1.0", features = ["derive"] }
-   serde_json = "1.0"
-   uuid = { version = "1.0", features = ["v4"] }
-   clap = { version = "4.0", features = ["derive"] }
-   tungstenite = { version = "0.20", features = ["native-tls"] }
-   tokio-tungstenite = "0.20"
-   futures-util = "0.3"
-   ```
-
-3. **Build the client**
-   ```bash
-   cargo build --release
-   ```
-
-## 🚀 Usage
-
-### Starting the Server
-
+### Option 2: HTTP Only (Development) - **NOT RECOMMENDED**
 ```bash
 python main.py
 ```
+- HTTP: http://localhost:4433
+- **Does not handle certificates**
+- **Single server only**
 
-The server provides:
-- **Web Dashboard**: `http://localhost:4433`
-- **API Documentation**: `http://localhost:4433/docs`
-- **Health Check**: `http://localhost:4433/health`
-
-### Running the Client
-
-#### Basic Registration
+### Option 3: HTTPS Only (Production) - **NOT RECOMMENDED**
 ```bash
-./target/release/remote_agent_client --server-url "http://remote.skyshift.dev:4433"
+python main.py --https
 ```
+- HTTPS: https://localhost:4434
+- **Manual certificate management required**
+- **Single server only**
 
-#### Customer Registration
+## 🔐 SSL/TLS Configuration
+
+### Generate Certificates
 ```bash
-./target/release/remote_agent_client \
-  --server-url "http://remote.skyshift.dev:4433" \
-  --customer-uuid "2ce998a3-3168-40ef-8ceb-b9a4404f6342"
+python CertificateConfiguration/generate_certificates.py
 ```
 
-#### Advanced Configuration
+### Certificate Location
+- Certificate: `CertificateConfiguration/certs/server.crt`
+- Private Key: `CertificateConfiguration/certs/server.key`
+
+### Security Notes
+- Self-signed certificates for development/testing
+- Use `-k` flag with curl: `curl -k https://localhost:4434/health`
+- For production, replace with CA-signed certificates
+
+## 🧪 Testing
+
+### Test HTTP Server
 ```bash
-./target/release/remote_agent_client \
-  --server-url "http://remote.skyshift.dev:4433" \
-  --customer-uuid "2ce998a3-3168-40ef-8ceb-b9a4404f6342" \
-  --heartbeat-interval 30 \
-  --agent-port 3000
+curl http://localhost:4433/health
 ```
 
-### WebSocket Communication
-
-The client automatically establishes a WebSocket connection to the server:
-
-```
-ws://server:4433/ws/agent/{agent_id}
+### Test HTTPS Server
+```bash
+curl -k https://localhost:4434/health
 ```
 
-**Message Types:**
-- `heartbeat`: Regular status updates
-- `task_result`: Command execution results
-- `task_status`: Real-time task progress
+### Test WebSocket Agent
+```bash
+python Testing/test_websocket_agent.py
+```
 
-## 📡 API Endpoints
+## 📋 Features
+
+### Core Features
+- ✅ Agent registration and management
+- ✅ Real-time WebSocket communication
+- ✅ Script execution and management
+- ✅ Customer management
+- ✅ SSL/TLS encryption support
+- ✅ Dual server support (HTTP + HTTPS)
+
+### Security Features
+- ✅ SSL/TLS encryption on port 4434
+- ✅ Self-signed certificate generation
+- ✅ Secure WebSocket connections
+- ✅ Input validation and sanitization
+
+### Management Features
+- ✅ Dashboard with real-time agent status
+- ✅ Script library with upload support
+- ✅ Customer assignment and management
+- ✅ Command execution with output capture
+
+## 🔍 API Endpoints
 
 ### Agent Management
-- `POST /api/agents/register` - Register new agent
 - `GET /api/agents` - List all agents
+- `POST /api/agents/register` - Register new agent
 - `GET /api/agents/{agent_id}` - Get agent status
 - `DELETE /api/agents/{agent_id}` - Unregister agent
 
-### Command Execution
-- `POST /api/agents/{agent_id}/commands` - Send command to agent
-- `GET /api/agents/{agent_id}/tasks/{task_id}` - Get task status
-- `POST /api/agents/{agent_id}/tasks/{task_id}/cancel` - Cancel task
+### Script Management
+- `GET /api/scripts` - List all scripts
+- `POST /api/scripts` - Create new script
+- `POST /api/scripts/{script_id}/execute` - Execute script
 
 ### Customer Management
-- `POST /api/customers` - Create customer
-- `GET /api/customers` - List customers
-- `PUT /api/customers/{uuid}` - Update customer
-- `DELETE /api/customers/{uuid}` - Delete customer
+- `GET /api/customers` - List all customers
+- `POST /api/customers` - Create new customer
 
-### WebSocket
-- `WS /ws/agent/{agent_id}` - Real-time agent communication
+### Health & Status
+- `GET /health` - Health check
+- `GET /api/agents/{agent_id}/test-connection` - Test agent connectivity
 
-## 🔧 Configuration
+## 🛠️ Development
 
-### Server Configuration
-```python
-# main.py
-app = FastAPI(
-    title="Remote Agent Manager",
-    version="1.0.0",
-    lifespan=lifespan
-)
+### Prerequisites
+- Python 3.8+
+- OpenSSL (for certificate generation)
+- FastAPI
+- Uvicorn
 
-# Server runs on port 4433 by default
-uvicorn.run(app, host="0.0.0.0", port=4433)
-```
-
-### Client Configuration
-```rust
-// Command line arguments
-#[derive(Parser)]
-struct Args {
-    #[arg(long, default_value = "http://localhost:4433")]
-    server_url: String,
-    
-    #[arg(long)]
-    customer_uuid: Option<String>,
-    
-    #[arg(long, default_value = "20")]
-    heartbeat_interval: u64,
-    
-    #[arg(long, default_value = "3000")]
-    agent_port: u16,
-}
-```
-
-## 🌐 Network Architecture
-
-### WebSocket Communication Flow
-1. **Client Registration**: Agent registers via HTTP
-2. **WebSocket Connection**: Client establishes WebSocket connection
-3. **Command Execution**: Server sends commands via WebSocket
-4. **Real-time Updates**: Client sends task results via WebSocket
-5. **Fallback**: HTTP used if WebSocket unavailable
-
-### Connection Types
-- **WebSocket**: Primary communication channel (real-time)
-- **HTTP**: Fallback for legacy agents or network issues
-
-## 📊 Dashboard Features
-
-### Real-time Monitoring
-- **Connection Status**: WebSocket vs HTTP indicators
-- **Agent Health**: Live status updates
-- **Command Execution**: Real-time task progress
-- **Customer Filtering**: Filter agents by customer
-
-### Interactive Panels
-- **Command Panel**: Draggable command interface
-- **Results Panel**: Real-time task results
-- **System Status**: Live connection statistics
-
-## 🔒 Security Considerations
-
-### Network Security
-- **Firewall Configuration**: Ensure port 4433 is accessible
-- **VPN Requirements**: For cross-network communication
-- **SSL/TLS**: Consider HTTPS/WSS for production
-
-### Agent Security
-- **Command Validation**: Server-side command sanitization
-- **Timeout Limits**: Prevent long-running commands
-- **Access Control**: Customer-based agent isolation
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-#### Agent Not Connecting
+### Installation
 ```bash
-# Check server connectivity
-curl http://server:4433/health
+# Install dependencies
+pip install fastapi uvicorn jinja2 python-multipart
 
+# Generate certificates (first time)
+python CertificateConfiguration/generate_certificates.py
+```
+
+### Development Workflow
+1. **Start servers: `python run_servers.py`** (always use this)
+2. Access dashboard: http://localhost:4433
+3. Test HTTPS: https://localhost:4434
+4. Run tests: `python Testing/test_websocket_agent.py`
+5. **For external access, use HTTPS: https://localhost:4434**
+
+## 📚 Documentation
+
+- [SSL/TLS Setup](CertificateConfiguration/SSL_SETUP.md) - Complete SSL configuration guide
+- [Testing Guide](Testing/) - Testing tools and examples
+
+## 🔧 Troubleshooting
+
+### Port Conflicts
+```bash
+# Check if ports are in use
+lsof -i :4433
+lsof -i :4434
+```
+
+### Certificate Issues
+```bash
+# Regenerate certificates
+python CertificateConfiguration/generate_certificates.py
+```
+
+### WebSocket Issues
+```bash
 # Test WebSocket connection
-wscat -c ws://server:4433/ws/agent/test
+python Testing/test_websocket_agent.py
 ```
 
-#### Commands Not Executing
-1. **Check Agent Status**: Verify agent is online
-2. **Check Connection Type**: WebSocket vs HTTP
-3. **Check Network**: Ensure server can reach agent
-4. **Check Firewall**: Verify port 3000 is open
+## 📄 License
 
-#### WebSocket Issues
-```bash
-# Check WebSocket endpoint
-curl -i -N -H "Connection: Upgrade" -H "Upgrade: websocket" \
-     -H "Sec-WebSocket-Version: 13" \
-     -H "Sec-WebSocket-Key: x3JJHMbDL1EzLkh9GBhXDw==" \
-     http://server:4433/ws/agent/test
-```
-
-### Debug Commands
-```bash
-# Test agent connection
-curl http://server:4433/api/agents/{agent_id}/test-connection
-
-# Check agent status
-curl http://server:4433/api/agents/{agent_id}
-
-# Send test command
-curl -X POST http://server:4433/api/agents/{agent_id}/commands \
-  -H "Content-Type: application/json" \
-  -d '{"command": "whoami", "shell_type": "cmd"}'
-```
-
-## 📈 Performance
-
-### Optimization Tips
-- **WebSocket Priority**: Use WebSocket for real-time commands
-- **Connection Pooling**: Reuse HTTP connections
-- **Command Batching**: Send multiple commands efficiently
-- **Result Streaming**: Stream large command outputs
-
-### Monitoring
-- **Connection Count**: Monitor WebSocket connections
-- **Command Latency**: Track command execution times
-- **Error Rates**: Monitor failed commands
-- **Network Usage**: Track bandwidth consumption
+This project is licensed under the MIT License.
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests
+4. Test thoroughly
 5. Submit a pull request
 
-## 📄 License
+## 📞 Support
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🆘 Support
-
-For support and questions:
-- Create an issue on GitHub
-- Check the troubleshooting section
-- Review the API documentation at `/docs`
-
-## 🔄 Migration from HTTP-only
-
-If migrating from the HTTP-only version:
-
-1. **Update Server**: Use the new WebSocket-enabled server
-2. **Update Clients**: Deploy new Rust clients with WebSocket support
-3. **Test Connectivity**: Verify WebSocket connections work
-4. **Monitor**: Watch for improved real-time performance
-
-The system maintains backward compatibility with HTTP-only agents while providing enhanced real-time capabilities for WebSocket-enabled clients. 
+For issues and questions:
+1. Check the troubleshooting section
+2. Review the SSL setup documentation
+3. Test with the provided testing tools
+4. Create an issue with detailed information 

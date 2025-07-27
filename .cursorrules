@@ -1,0 +1,79 @@
+# Remote Agent Manager - Cursor Rules
+
+## Project Structure
+- `main.py` - Main FastAPI application (keep clean, minimal changes)
+- `run_servers.py` - Dual server launcher (HTTP + HTTPS) - **USE THIS TO START SERVERS**
+- `Testing/` - All testing and development tools
+- `CertificateConfiguration/` - SSL/TLS certificate management
+- `templates/` - HTML templates (Jinja2)
+- `static/` - Static assets (CSS, JS)
+
+## Server Startup
+- **ALWAYS use `python run_servers.py` to start the application**
+- This starts both HTTP (4433) and HTTPS (4434) servers
+- Do NOT use `python main.py` directly
+- The `run_servers.py` script handles certificate generation and dual server management
+
+## Code Organization Rules
+
+### 1. File Organization
+- Keep root directory clean with only essential files
+- Move testing files to `Testing/` directory
+- Move certificate-related files to `CertificateConfiguration/`
+- Maintain clear separation between production and development code
+
+### 2. SSL/TLS Configuration
+- All certificate generation in `CertificateConfiguration/`
+- Certificate files in `CertificateConfiguration/certs/`
+- Update paths in `main.py` and `run_servers.py` when moving files
+- Use relative paths from project root
+
+### 3. Testing Guidelines
+- All test scripts go in `Testing/` directory
+- Use descriptive names for test files
+- Include proper error handling in test scripts
+- Document test procedures in README
+
+### 4. Documentation
+- Keep README.md comprehensive and up-to-date
+- Document SSL setup in `CertificateConfiguration/SSL_SETUP.md`
+- Include troubleshooting guides
+- Provide clear usage examples
+
+### 5. Security Best Practices
+- Use self-signed certificates for development only
+- Document production certificate requirements
+- Include security warnings in documentation
+- Validate all user inputs
+
+### 6. Development Workflow
+- **ALWAYS start servers with `python run_servers.py`**
+- Test both HTTP and HTTPS endpoints
+- Verify WebSocket connections work
+- Check certificate generation process
+- Ensure proper error handling
+- Verify authentication works for both local and external requests
+
+### 7. Code Style
+- Use consistent naming conventions
+- Include proper logging
+- Add type hints where appropriate
+- Follow FastAPI best practices
+
+### 8. File Naming
+- Use descriptive, lowercase names
+- Separate words with underscores
+- Group related files in directories
+- Avoid generic names like "test.py"
+
+### 9. Path Management
+- Use relative paths from project root
+- Update all references when moving files
+- Test path changes thoroughly
+- Document path dependencies
+
+### 10. Error Handling
+- Include comprehensive error messages
+- Log errors with appropriate levels
+- Provide user-friendly error responses
+- Include troubleshooting steps in errors 

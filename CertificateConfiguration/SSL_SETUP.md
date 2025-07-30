@@ -6,8 +6,8 @@ This document explains how to set up SSL/TLS encryption for the Remote Agent Man
 
 The Remote Agent Manager now supports both HTTP and HTTPS:
 
-- **HTTP (Port 4433)**: For internal debugging and development
-- **HTTPS (Port 4434)**: For secure production use with SSL/TLS encryption
+- **HTTP (Port 80)**: For internal debugging and development
+- **HTTPS (Port 443)**: For secure production use with SSL/TLS encryption
 
 ## 📋 Prerequisites
 
@@ -25,22 +25,25 @@ python generate_certificates.py
 ```
 
 This creates:
+
 - `certs/server.crt` - SSL certificate
 - `certs/server.key` - Private key
 
 ### 2. Start Both Servers
 
 #### Option A: Run both servers simultaneously
+
 ```bash
 python run_servers.py
 ```
 
 #### Option B: Run servers individually
+
 ```bash
-# HTTP server (port 4433)
+# HTTP server (port 80)
 python main.py
 
-# HTTPS server (port 4434) - in another terminal
+# HTTPS server (port 443) - in another terminal
 python main.py --https
 ```
 
@@ -48,64 +51,75 @@ python main.py --https
 
 Once started, you can access:
 
-- **HTTP (Internal/Debug)**: http://localhost:4433
-- **HTTPS (Secure)**: https://localhost:4434
+- **HTTP (Internal/Debug)**: http://remote.skyshift.dev:80
+- **HTTPS (Secure)**: https://remote.skyshift.dev:443
 
 ## 🔧 Configuration
 
 ### Certificate Location
+
 - Certificate: `certs/server.crt`
 - Private Key: `certs/server.key`
 
 ### Port Configuration
-- HTTP: Port 4433 (unencrypted)
-- HTTPS: Port 4434 (SSL/TLS encrypted)
+
+- HTTP: Port 80 (unencrypted)
+- HTTPS: Port 443 (SSL/TLS encrypted)
 
 ## ⚠️ Security Notes
 
 ### Self-Signed Certificates
+
 - The generated certificates are **self-signed** for development/testing
 - Browsers will show security warnings (this is normal)
-- Use `-k` flag with curl: `curl -k https://localhost:4434/health`
+- Use `-k` flag with curl: `curl -k https://remote.skyshift.dev:443/health`
 
 ### Production Use
+
 For production environments:
+
 1. Obtain certificates from a trusted Certificate Authority (CA)
 2. Replace `certs/server.crt` and `certs/server.key` with your CA certificates
-3. Ensure proper firewall rules for port 4434
+3. Ensure proper firewall rules for port 443
 
 ## 🧪 Testing
 
 ### Test HTTP Server
+
 ```bash
-curl http://localhost:4433/health
+curl http://remote.skyshift.dev:80/health
 ```
 
 ### Test HTTPS Server
+
 ```bash
-curl -k https://localhost:4434/health
+curl -k https://remote.skyshift.dev:443/health
 ```
 
 ### Test Web Interface
-- HTTP: http://localhost:4433
-- HTTPS: https://localhost:4434
+
+- HTTP: http://remote.skyshift.dev:80
+- HTTPS: https://remote.skyshift.dev:443
 
 ## 🔍 Troubleshooting
 
 ### Certificate Issues
+
 ```bash
 # Regenerate certificates
 python generate_certificates.py
 ```
 
 ### Port Conflicts
+
 ```bash
 # Check if ports are in use
-lsof -i :4433
-lsof -i :4434
+lsof -i :80
+lsof -i :443
 ```
 
 ### SSL Context Errors
+
 - Ensure OpenSSL is installed
 - Check certificate file permissions
 - Verify certificate paths in `main.py`
@@ -126,20 +140,23 @@ Remote Agent Manager/
 ## 🎯 Usage Examples
 
 ### Development (HTTP only)
+
 ```bash
 python main.py
-# Access: http://localhost:4433
+# Access: http://remote.skyshift.dev:80
 ```
 
 ### Production (HTTPS only)
+
 ```bash
 python main.py --https
-# Access: https://localhost:4434
+# Access: https://remote.skyshift.dev:443
 ```
 
 ### Both (Development + Production)
+
 ```bash
 python run_servers.py
-# Access: http://localhost:4433 (debug)
-# Access: https://localhost:4434 (secure)
-``` 
+# Access: http://remote.skyshift.dev:80 (debug)
+# Access: https://remote.skyshift.dev:443 (secure)
+```

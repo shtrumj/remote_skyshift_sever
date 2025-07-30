@@ -365,13 +365,18 @@ pre {
   z-index: 1050;
   min-width: 350px;
   min-height: 150px;
+  max-width: 500px;
+  max-height: 400px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   background: white;
   border-radius: 10px;
-  transition: box-shadow 0.2s;
+  transition: all 0.3s ease;
   /* Ensure panels stay within viewport bounds */
   max-width: calc(100vw - 40px);
   max-height: calc(100vh - 40px);
+  /* Default positioning to prevent overlap with main content */
+  left: 20px;
+  top: 20px;
 }
 
 .draggable-panel .card-header {
@@ -442,6 +447,22 @@ pre {
   /* Prevent panels from going off-screen */
   left: max(20px, min(calc(100vw - 370px), left)) !important;
   top: max(20px, min(calc(100vh - 170px), top)) !important;
+}
+
+/* Animation for panel positioning */
+.draggable-panel.positioning {
+  animation: panelSlideIn 0.3s ease-out;
+}
+
+@keyframes panelSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* Ensure panels don't interfere with main layout */

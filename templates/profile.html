@@ -1,261 +1,484 @@
-{% extends "base.html" %}
+{% extends "base.html" %} {% block title %}User Profile - Remote Agent Manager{%
+endblock %} {% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <!-- Alert Container -->
+      <div id="profile-alert"></div>
 
-{% block title %}Profile - Remote Agent Manager{% endblock %}
-
-{% block content %}
-<div class="container-fluid mt-4">
-    <div class="row">
-        <div class="col-lg-8 mx-auto">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-user-edit me-2"></i>User Profile
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div id="profile-alert"></div>
-                    
-                    <form id="profileForm">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="username" class="form-label">
-                                        <i class="fas fa-user me-1"></i>Username
-                                    </label>
-                                    <input type="text" class="form-control" id="username" name="username" readonly>
-                                    <small class="text-muted">Username cannot be changed</small>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="email" class="form-label">
-                                        <i class="fas fa-envelope me-1"></i>Email
-                                    </label>
-                                    <input type="email" class="form-control" id="email" name="email" required>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="full_name" class="form-label">
-                                        <i class="fas fa-id-card me-1"></i>Full Name
-                                    </label>
-                                    <input type="text" class="form-control" id="full_name" name="full_name">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="status" class="form-label">
-                                        <i class="fas fa-circle me-1"></i>Status
-                                    </label>
-                                    <input type="text" class="form-control" id="status" name="status" readonly>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="created_at" class="form-label">
-                                        <i class="fas fa-calendar me-1"></i>Member Since
-                                    </label>
-                                    <input type="text" class="form-control" id="created_at" name="created_at" readonly>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="last_login" class="form-label">
-                                        <i class="fas fa-clock me-1"></i>Last Login
-                                    </label>
-                                    <input type="text" class="form-control" id="last_login" name="last_login" readonly>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <hr>
-                        
-                        <h6 class="mb-3">
-                            <i class="fas fa-lock me-1"></i>Change Password
-                        </h6>
-                        
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="current_password" class="form-label">Current Password</label>
-                                    <input type="password" class="form-control" id="current_password" name="current_password">
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="new_password" class="form-label">New Password</label>
-                                    <input type="password" class="form-control" id="new_password" name="new_password">
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="confirm_password" class="form-label">Confirm New Password</label>
-                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary" id="updateProfileBtn">
-                                <i class="fas fa-save me-1"></i>Update Profile
-                            </button>
-                            <button type="button" class="btn btn-secondary" id="changePasswordBtn">
-                                <i class="fas fa-key me-1"></i>Change Password
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" onclick="loadProfile()">
-                                <i class="fas fa-sync-alt me-1"></i>Refresh
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            
-            <!-- Account Statistics -->
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-bar me-2"></i>Account Statistics
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-md-3">
-                            <div class="border-end">
-                                <h4 id="total-logins">0</h4>
-                                <small class="text-muted">Total Logins</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <h4 id="session-time">0h</h4>
-                            <small class="text-muted">Session Time</small>
-                        </div>
-                        <div class="col-md-3">
-                            <h4 id="commands-sent">0</h4>
-                            <small class="text-muted">Commands Sent</small>
-                        </div>
-                        <div class="col-md-3">
-                            <h4 id="scripts-created">0</h4>
-                            <small class="text-muted">Scripts Created</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
+      <!-- User Profile -->
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-user me-2"></i>User Profile</h5>
         </div>
+        <div class="card-body">
+          <form id="profileForm">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="username" class="form-label">Username</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="username"
+                    name="username"
+                    readonly
+                  />
+                  <div class="form-text">Username cannot be changed.</div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="email" class="form-label">Email</label>
+                  <input
+                    type="email"
+                    class="form-control"
+                    id="email"
+                    name="email"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="full_name" class="form-label">Full Name</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="full_name"
+                    name="full_name"
+                  />
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="status" class="form-label">Status</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="status"
+                    name="status"
+                    readonly
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="created_at" class="form-label"
+                    >Member Since</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="created_at"
+                    name="created_at"
+                    readonly
+                  />
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="last_login" class="form-label">Last Login</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="last_login"
+                    name="last_login"
+                    readonly
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Change Password Section -->
+            <div class="card mt-4">
+              <div class="card-header bg-secondary text-white">
+                <h6 class="mb-0">
+                  <i class="fas fa-key me-2"></i>Change Password
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label for="current_password" class="form-label"
+                        >Current Password</label
+                      >
+                      <input
+                        type="password"
+                        class="form-control"
+                        id="current_password"
+                        name="current_password"
+                      />
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label for="new_password" class="form-label"
+                        >New Password</label
+                      >
+                      <input
+                        type="password"
+                        class="form-control"
+                        id="new_password"
+                        name="new_password"
+                      />
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label for="confirm_password" class="form-label"
+                        >Confirm New Password</label
+                      >
+                      <input
+                        type="password"
+                        class="form-control"
+                        id="confirm_password"
+                        name="confirm_password"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-flex gap-2 mt-3">
+              <button
+                type="submit"
+                class="btn btn-primary"
+                id="updateProfileBtn"
+              >
+                <i class="fas fa-save me-1"></i>Update Profile
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="changePasswordBtn"
+              >
+                <i class="fas fa-key me-1"></i>Change Password
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                id="refreshBtn"
+              >
+                <i class="fas fa-sync-alt me-1"></i>Refresh
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-warning"
+                id="testBtn"
+              >
+                <i class="fas fa-bug me-1"></i>Test
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Account Statistics -->
+      <div class="card mt-4">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0">
+            <i class="fas fa-chart-bar me-2"></i>Account Statistics
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row text-center">
+            <div class="col-md-3">
+              <div class="border-end">
+                <h4 id="total-logins">0</h4>
+                <small class="text-muted">Total Logins</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <h4 id="session-time">0h</h4>
+              <small class="text-muted">Session Time</small>
+            </div>
+            <div class="col-md-3">
+              <h4 id="commands-sent">0</h4>
+              <small class="text-muted">Commands Sent</small>
+            </div>
+            <div class="col-md-3">
+              <h4 id="scripts-created">0</h4>
+              <small class="text-muted">Scripts Created</small>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
 
 <script>
-$(document).ready(function() {
-    loadProfile();
-    
-    // Update profile
-    $('#updateProfileBtn').click(function(e) {
-        e.preventDefault();
-        
-        const formData = {
-            email: $('#email').val(),
-            full_name: $('#full_name').val()
-        };
-        
-        $.ajax({
-            url: '/api/users/profile',
-            method: 'PUT',
-            contentType: 'application/json',
-            data: JSON.stringify(formData),
-            success: function(response) {
-                showAlert('Profile updated successfully!', 'success');
-                loadProfile();
-            },
-            error: function(xhr) {
-                showAlert('Failed to update profile: ' + (xhr.responseJSON?.detail || 'Unknown error'), 'danger');
-            }
-        });
-    });
-    
-    // Change password
-    $('#changePasswordBtn').click(function(e) {
-        e.preventDefault();
-        
-        const currentPassword = $('#current_password').val();
-        const newPassword = $('#new_password').val();
-        const confirmPassword = $('#confirm_password').val();
-        
-        if (!currentPassword || !newPassword || !confirmPassword) {
-            showAlert('Please fill in all password fields', 'warning');
-            return;
-        }
-        
-        if (newPassword !== confirmPassword) {
-            showAlert('New passwords do not match', 'warning');
-            return;
-        }
-        
-        if (newPassword.length < 6) {
-            showAlert('Password must be at least 6 characters long', 'warning');
-            return;
-        }
-        
-        const formData = {
-            current_password: currentPassword,
-            new_password: newPassword
-        };
-        
-        $.ajax({
-            url: '/api/users/change-password',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(formData),
-            success: function(response) {
-                showAlert('Password changed successfully!', 'success');
-                $('#current_password').val('');
-                $('#new_password').val('');
-                $('#confirm_password').val('');
-            },
-            error: function(xhr) {
-                showAlert('Failed to change password: ' + (xhr.responseJSON?.detail || 'Unknown error'), 'danger');
-            }
-        });
-    });
-});
+  // Simple and reliable profile loading
+  document.addEventListener("DOMContentLoaded", function () {
+    console.log("🚀 Profile page loaded, starting initialization...");
 
-function loadProfile() {
-    $.ajax({
-        url: '/api/users/profile',
-        method: 'GET',
-        success: function(user) {
-            $('#username').val(user.username);
-            $('#email').val(user.email);
-            $('#full_name').val(user.full_name || '');
-            $('#status').val(user.is_active ? 'Active' : 'Inactive');
-            $('#created_at').val(new Date(user.created_at).toLocaleDateString());
-            $('#last_login').val(user.last_login ? new Date(user.last_login).toLocaleString() : 'Never');
-            
-            // Load statistics (placeholder data for now)
-            $('#total-logins').text(user.total_logins || 0);
-            $('#session-time').text(user.session_time || '0h');
-            $('#commands-sent').text(user.commands_sent || 0);
-            $('#scripts-created').text(user.scripts_created || 0);
-        },
-        error: function(xhr) {
-            showAlert('Failed to load profile: ' + (xhr.responseJSON?.detail || 'Unknown error'), 'danger');
-        }
-    });
-}
+    // Clear all fields first
+    clearAllFields();
 
-function showAlert(message, type) {
+    // Load profile data immediately
+    loadProfileData();
+
+    // Set up event listeners
+    setupEventListeners();
+  });
+
+  function clearAllFields() {
+    console.log("🧹 Clearing all form fields...");
+    const fields = [
+      "username",
+      "email",
+      "full_name",
+      "status",
+      "created_at",
+      "last_login",
+    ];
+    fields.forEach((fieldId) => {
+      const field = document.getElementById(fieldId);
+      if (field) {
+        field.value = "";
+      }
+    });
+  }
+
+  function loadProfileData() {
+    console.log("📡 Loading profile data...");
+
+    fetch("/api/users/profile", {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => {
+        console.log("📥 Response status:", response.status);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((userData) => {
+        console.log("✅ Profile data received:", userData);
+        populateFields(userData);
+      })
+      .catch((error) => {
+        console.error("❌ Error loading profile:", error);
+        showAlert("Failed to load profile data: " + error.message, "danger");
+      });
+  }
+
+  function populateFields(userData) {
+    console.log("🔄 Populating form fields...");
+
+    // Map data to fields
+    const fieldMappings = {
+      username: userData.username || "",
+      email: userData.email || "",
+      full_name: userData.full_name || "",
+      status: userData.is_active ? "Active" : "Inactive",
+      created_at: userData.created_at
+        ? new Date(userData.created_at).toLocaleDateString()
+        : "",
+      last_login: userData.last_login
+        ? new Date(userData.last_login).toLocaleString()
+        : "Never",
+    };
+
+    // Set each field
+    Object.keys(fieldMappings).forEach((fieldId) => {
+      const field = document.getElementById(fieldId);
+      if (field) {
+        field.value = fieldMappings[fieldId];
+        console.log(`✅ Set ${fieldId}: ${fieldMappings[fieldId]}`);
+      } else {
+        console.warn(`⚠️ Field not found: ${fieldId}`);
+      }
+    });
+
+    // Set statistics
+    document.getElementById("total-logins").textContent =
+      userData.total_logins || 0;
+    document.getElementById("session-time").textContent =
+      (userData.session_time || 0) + "h";
+    document.getElementById("commands-sent").textContent =
+      userData.commands_sent || 0;
+    document.getElementById("scripts-created").textContent =
+      userData.scripts_created || 0;
+
+    console.log("✅ All fields populated successfully");
+  }
+
+  function setupEventListeners() {
+    console.log("🔗 Setting up event listeners...");
+
+    // Update Profile button
+    document
+      .getElementById("updateProfileBtn")
+      .addEventListener("click", function (e) {
+        e.preventDefault();
+        console.log("🔄 Update profile clicked");
+        updateProfile();
+      });
+
+    // Change Password button
+    document
+      .getElementById("changePasswordBtn")
+      .addEventListener("click", function (e) {
+        e.preventDefault();
+        console.log("🔑 Change password clicked");
+        changePassword();
+      });
+
+    // Refresh button
+    document
+      .getElementById("refreshBtn")
+      .addEventListener("click", function (e) {
+        e.preventDefault();
+        console.log("🔄 Refresh clicked");
+        loadProfileData();
+      });
+
+    // Test button
+    document.getElementById("testBtn").addEventListener("click", function (e) {
+      e.preventDefault();
+      console.log("🧪 Test button clicked");
+      testFunctionality();
+    });
+  }
+
+  function updateProfile() {
+    const formData = {
+      email: document.getElementById("email").value,
+      full_name: document.getElementById("full_name").value,
+    };
+
+    console.log("📤 Updating profile with:", formData);
+
+    fetch("/api/users/profile", {
+      method: "PUT",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formData),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("✅ Profile updated:", data);
+        showAlert("Profile updated successfully!", "success");
+      })
+      .catch((error) => {
+        console.error("❌ Profile update failed:", error);
+        showAlert("Failed to update profile: " + error.message, "danger");
+      });
+  }
+
+  function changePassword() {
+    const currentPassword = document.getElementById("current_password").value;
+    const newPassword = document.getElementById("new_password").value;
+    const confirmPassword = document.getElementById("confirm_password").value;
+
+    console.log("🔑 Password change requested");
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      showAlert("Please fill in all password fields", "warning");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      showAlert("New passwords do not match", "warning");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      showAlert("Password must be at least 6 characters long", "warning");
+      return;
+    }
+
+    const formData = {
+      current_password: currentPassword,
+      new_password: newPassword,
+    };
+
+    console.log("📤 Changing password...");
+
+    fetch("/api/users/change-password", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formData),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("✅ Password changed:", data);
+        showAlert("Password changed successfully!", "success");
+
+        // Clear password fields
+        document.getElementById("current_password").value = "";
+        document.getElementById("new_password").value = "";
+        document.getElementById("confirm_password").value = "";
+      })
+      .catch((error) => {
+        console.error("❌ Password change failed:", error);
+        showAlert("Failed to change password: " + error.message, "danger");
+      });
+  }
+
+  function testFunctionality() {
+    console.log("🧪 Testing profile functionality...");
+
+    // Test field values
+    const fields = [
+      "username",
+      "email",
+      "full_name",
+      "status",
+      "created_at",
+      "last_login",
+    ];
+    fields.forEach((fieldId) => {
+      const field = document.getElementById(fieldId);
+      console.log(`${fieldId}: "${field ? field.value : "NOT FOUND"}"`);
+    });
+
+    // Test API endpoint
+    fetch("/api/users/profile", {
+      method: "GET",
+      credentials: "include",
+    })
+      .then((response) => {
+        console.log("🧪 API test response status:", response.status);
+        return response.json();
+      })
+      .then((data) => {
+        console.log("🧪 API test data:", data);
+        showAlert("Test completed - check console for details", "info");
+      })
+      .catch((error) => {
+        console.error("🧪 API test failed:", error);
+        showAlert("Test failed: " + error.message, "danger");
+      });
+  }
+
+  function showAlert(message, type) {
+    const alertContainer = document.getElementById("profile-alert");
     const alertHtml = `
         <div class="alert alert-${type} alert-dismissible fade show" role="alert">
             ${message}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     `;
-    $('#profile-alert').html(alertHtml);
-}
+    alertContainer.innerHTML = alertHtml;
+  }
 </script>
-{% endblock %} 
+{% endblock %}

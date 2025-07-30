@@ -6,7 +6,7 @@
 
 ```bash
 # Send command to a specific agent by ID
-curl -X POST "http://remote.skyshift.dev:4433/api/agents/{AGENT_ID}/commands" \
+curl -X POST "https://remote.skyshift.dev:443/api/agents/{AGENT_ID}/commands" \
   -H "Content-Type: application/json" \
   -d '{
     "command": "echo \"Hello from remote manager!\"",
@@ -16,8 +16,9 @@ curl -X POST "http://remote.skyshift.dev:4433/api/agents/{AGENT_ID}/commands" \
 ```
 
 **Example with real agent ID:**
+
 ```bash
-curl -X POST "http://remote.skyshift.dev:4433/api/agents/2ee09ba5-e227-400b-993e-6a97faaff50d/commands" \
+curl -X POST "https://remote.skyshift.dev:443/api/agents/2ee09ba5-e227-400b-993e-6a97faaff50d/commands" \
   -H "Content-Type: application/json" \
   -d '{
     "command": "hostname && whoami",
@@ -30,7 +31,7 @@ curl -X POST "http://remote.skyshift.dev:4433/api/agents/2ee09ba5-e227-400b-993e
 
 ```bash
 # Send command to ALL online agents
-curl -X POST "http://remote.skyshift.dev:4433/api/commands/broadcast" \
+curl -X POST "https://remote.skyshift.dev:443/api/commands/broadcast" \
   -H "Content-Type: application/json" \
   -d '{
     "command": "echo \"Broadcast message\"",
@@ -43,20 +44,20 @@ curl -X POST "http://remote.skyshift.dev:4433/api/commands/broadcast" \
 
 ```bash
 # Get status of a specific task
-curl -X GET "http://remote.skyshift.dev:4433/api/agents/{AGENT_ID}/tasks/{TASK_ID}"
+curl -X GET "https://remote.skyshift.dev:443/api/agents/{AGENT_ID}/tasks/{TASK_ID}"
 
 # Example:
-curl -X GET "http://remote.skyshift.dev:4433/api/agents/2ee09ba5-e227-400b-993e-6a97faaff50d/tasks/abc123"
+curl -X GET "https://remote.skyshift.dev:443/api/agents/2ee09ba5-e227-400b-993e-6a97faaff50d/tasks/abc123"
 ```
 
 ### **Method 4: List All Tasks for an Agent**
 
 ```bash
 # Get all tasks for a specific agent
-curl -X GET "http://remote.skyshift.dev:4433/api/agents/{AGENT_ID}/tasks"
+curl -X GET "https://remote.skyshift.dev:443/api/agents/{AGENT_ID}/tasks"
 
 # Example:
-curl -X GET "http://remote.skyshift.dev:4433/api/agents/2ee09ba5-e227-400b-993e-6a97faaff50d/tasks"
+curl -X GET "https://remote.skyshift.dev:443/api/agents/2ee09ba5-e227-400b-993e-6a97faaff50d/tasks"
 ```
 
 ## 📋 **Command Request Format**
@@ -84,6 +85,7 @@ curl -X GET "http://remote.skyshift.dev:4433/api/agents/2ee09ba5-e227-400b-993e-
 ## 📊 **Response Format**
 
 **Successful Command Submission:**
+
 ```json
 {
   "task_id": "uuid-task-id",
@@ -93,6 +95,7 @@ curl -X GET "http://remote.skyshift.dev:4433/api/agents/2ee09ba5-e227-400b-993e-
 ```
 
 **Task Status Response:**
+
 ```json
 {
   "id": "task-id",
@@ -104,22 +107,22 @@ curl -X GET "http://remote.skyshift.dev:4433/api/agents/2ee09ba5-e227-400b-993e-
   "exit_code": 0,
   "output": "hello\n",
   "error": null,
-  "logs": [
-    "[STDOUT] hello"
-  ]
+  "logs": ["[STDOUT] hello"]
 }
 ```
 
 ## 🔍 **Step-by-Step Example**
 
 ### **1. List Available Agents**
+
 ```bash
-curl -X GET "http://remote.skyshift.dev:4433/api/agents"
+curl -X GET "https://remote.skyshift.dev:443/api/agents"
 ```
 
 ### **2. Send Command to Agent**
+
 ```bash
-curl -X POST "http://remote.skyshift.dev:4433/api/agents/2ee09ba5-e227-400b-993e-6a97faaff50d/commands" \
+curl -X POST "https://remote.skyshift.dev:443/api/agents/2ee09ba5-e227-400b-993e-6a97faaff50d/commands" \
   -H "Content-Type: application/json" \
   -d '{
     "command": "ls -la",
@@ -128,16 +131,18 @@ curl -X POST "http://remote.skyshift.dev:4433/api/agents/2ee09ba5-e227-400b-993e
 ```
 
 ### **3. Check Task Status**
+
 ```bash
 # Use the task_id from step 2
-curl -X GET "http://remote.skyshift.dev:4433/api/agents/2ee09ba5-e227-400b-993e-6a97faaff50d/tasks/{TASK_ID}"
+curl -X GET "https://remote.skyshift.dev:443/api/agents/2ee09ba5-e227-400b-993e-6a97faaff50d/tasks/{TASK_ID}"
 ```
 
 ## 🚀 **Advanced Examples**
 
 ### **Long-Running Command**
+
 ```bash
-curl -X POST "http://remote.skyshift.dev:4433/api/agents/{AGENT_ID}/commands" \
+curl -X POST "https://remote.skyshift.dev:443/api/agents/{AGENT_ID}/commands" \
   -H "Content-Type: application/json" \
   -d '{
     "command": "sleep 10 && echo \"Long task completed\"",
@@ -147,8 +152,9 @@ curl -X POST "http://remote.skyshift.dev:4433/api/agents/{AGENT_ID}/commands" \
 ```
 
 ### **Command with Environment Variables**
+
 ```bash
-curl -X POST "http://remote.skyshift.dev:4433/api/agents/{AGENT_ID}/commands" \
+curl -X POST "https://remote.skyshift.dev:443/api/agents/{AGENT_ID}/commands" \
   -H "Content-Type: application/json" \
   -d '{
     "command": "echo $CUSTOM_VAR",
@@ -160,8 +166,9 @@ curl -X POST "http://remote.skyshift.dev:4433/api/agents/{AGENT_ID}/commands" \
 ```
 
 ### **Windows PowerShell Command**
+
 ```bash
-curl -X POST "http://remote.skyshift.dev:4433/api/agents/{AGENT_ID}/commands" \
+curl -X POST "https://remote.skyshift.dev:443/api/agents/{AGENT_ID}/commands" \
   -H "Content-Type: application/json" \
   -d '{
     "command": "Get-Process | Select-Object Name, CPU",
@@ -175,4 +182,4 @@ curl -X POST "http://remote.skyshift.dev:4433/api/agents/{AGENT_ID}/commands" \
 2. **Task ID tracking** - Always save the task_id from the response to check status
 3. **Timeout handling** - Commands will timeout after the specified seconds
 4. **Error handling** - Check both `output` and `error` fields in task status
-5. **Logs** - All stdout/stderr is captured in the logs array 
+5. **Logs** - All stdout/stderr is captured in the logs array

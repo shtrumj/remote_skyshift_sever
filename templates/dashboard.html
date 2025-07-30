@@ -274,6 +274,7 @@
         function openCommandPanel(agentId, hostname) {
             currentAgent = agentId;
             $('#selected-agent').text(`${hostname} (${agentId})`);
+            positionPanelSideBySide('#command-panel');
             $('#command-panel').show();
         }
 
@@ -304,6 +305,7 @@
             };
 
             // Show task results panel
+            positionPanelSideBySide('#task-results');
             $('#task-results').show();
             $('#task-status').show();
             $('#task-output').hide();
@@ -434,6 +436,81 @@
             }, 5000);
         }
 
+        // Position panels side by side to prevent overlapping
+        function positionPanelSideBySide(panelSelector) {
+            const panel = $(panelSelector);
+            const visiblePanels = $('.draggable-panel:visible').not(panelSelector);
+            
+            if (visiblePanels.length === 0) {
+                // First panel - position in top-right corner
+                panel.css({
+                    left: '20px',
+                    top: '20px'
+                });
+                return;
+            }
+            
+            // Calculate available space
+            const windowWidth = $(window).width();
+            const windowHeight = $(window).height();
+            const panelWidth = panel.outerWidth() || 400;
+            const panelHeight = panel.outerHeight() || 300;
+            
+            // Find the best position that doesn't overlap
+            let bestPosition = { left: 20, top: 20 };
+            let maxOverlap = 0;
+            
+            // Try different positions
+            const positions = [
+                { left: 20, top: 20 },
+                { left: windowWidth - panelWidth - 20, top: 20 },
+                { left: 20, top: windowHeight - panelHeight - 20 },
+                { left: windowWidth - panelWidth - 20, top: windowHeight - panelHeight - 20 },
+                { left: (windowWidth - panelWidth) / 2, top: 20 },
+                { left: 20, top: (windowHeight - panelHeight) / 2 }
+            ];
+            
+            positions.forEach(pos => {
+                let totalOverlap = 0;
+                visiblePanels.each(function() {
+                    const otherPanel = $(this);
+                    const otherLeft = parseInt(otherPanel.css('left')) || 0;
+                    const otherTop = parseInt(otherPanel.css('top')) || 0;
+                    const otherWidth = otherPanel.outerWidth();
+                    const otherHeight = otherPanel.outerHeight();
+                    
+                    // Check for overlap
+                    const horizontalOverlap = Math.max(0, 
+                        Math.min(pos.left + panelWidth, otherLeft + otherWidth) - 
+                        Math.max(pos.left, otherLeft)
+                    );
+                    const verticalOverlap = Math.max(0,
+                        Math.min(pos.top + panelHeight, otherTop + otherHeight) - 
+                        Math.max(pos.top, otherTop)
+                    );
+                    
+                    totalOverlap += horizontalOverlap * verticalOverlap;
+                });
+                
+                if (totalOverlap < maxOverlap || maxOverlap === 0) {
+                    maxOverlap = totalOverlap;
+                    bestPosition = pos;
+                }
+            });
+            
+            // Apply the best position with animation
+            panel.addClass('positioning');
+            panel.css({
+                left: bestPosition.left + 'px',
+                top: bestPosition.top + 'px'
+            });
+            
+            // Remove animation class after animation completes
+            setTimeout(() => {
+                panel.removeClass('positioning');
+            }, 300);
+        }
+
         // Draggable panel functionality
         function makeDraggable(selector) {
             const panel = $(selector);
@@ -503,7 +580,7 @@
 
         // Handle window resize
         $(window).on('resize', function() {
-            $('.draggable-panel').each(function() {
+            $('.draggable-panel:visible').each(function() {
                 const panel = $(this);
                 const left = parseInt(panel.css('left')) || 0;
                 const top = parseInt(panel.css('top')) || 0;
@@ -514,6 +591,14 @@
                 if (left > maxLeft) panel.css('left', maxLeft + 'px');
                 if (top > maxTop) panel.css('top', maxTop + 'px');
             });
+            
+            // Reposition all visible panels to prevent overlap after resize
+            setTimeout(() => {
+                $('.draggable-panel:visible').each(function() {
+                    const panelSelector = '#' + $(this).attr('id');
+                    positionPanelSideBySide(panelSelector);
+                });
+            }, 100);
         });
     </script>
 {% endblock %} 

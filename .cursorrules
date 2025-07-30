@@ -1,52 +1,74 @@
 # Remote Agent Manager - Cursor Rules
 
 ## Project Structure
-- `main.py` - Main FastAPI application (keep clean, minimal changes)
-- `run_servers.py` - Dual server launcher (HTTP + HTTPS) - **USE THIS TO START SERVERS**
-- `Testing/` - All testing and development tools
+- `run_servers.py` - Main entry point for starting the application (keep in root)
+- `Scripts/` - All Python scripts and core application files
+  - `main.py` - Main FastAPI application
+  - `database.py` - Database models and manager
+  - `shared.py` - Shared components and models
+  - `auth.py` - Authentication module
+  - `customer_auth.py` - Customer API key authentication
+  - `*.py` - Utility scripts (user management, migrations, etc.)
+- `Data/` - Database files
+  - `*.db` - SQLite database files
+- `Config/` - Configuration files
+  - `*.ini` - Agent configuration files
+- `Documentation/` - All documentation files
+  - `*.md` - Markdown documentation
+- `Testing/` - Testing and development tools
 - `CertificateConfiguration/` - SSL/TLS certificate management
 - `templates/` - HTML templates (Jinja2)
 - `static/` - Static assets (CSS, JS)
+- `routes/` - API and UI route definitions
 
 ## Server Startup
 - **ALWAYS use `python run_servers.py` to start the application**
-- This starts both HTTP (4433) and HTTPS (4434) servers
-- Do NOT use `python main.py` directly
+- This starts both HTTP (80) and HTTPS (443) servers
+- Do NOT use `python Scripts/main.py` directly
 - The `run_servers.py` script handles certificate generation and dual server management
 
 ## Code Organization Rules
 
 ### 1. File Organization
-- Keep root directory clean with only essential files
-- Move testing files to `Testing/` directory
-- Move certificate-related files to `CertificateConfiguration/`
+- Keep root directory clean with only essential files (`run_servers.py`, `requirements.txt`, `.cursorrules`)
+- All Python scripts go in `Scripts/` directory
+- Database files go in `Data/` directory
+- Configuration files go in `Config/` directory
+- Documentation files go in `Documentation/` directory
+- Testing files go in `Testing/` directory
 - Maintain clear separation between production and development code
 
-### 2. SSL/TLS Configuration
+### 2. Import Paths
+- All imports from Scripts/ should use relative imports: `from Scripts.database import db_manager`
+- Routes should import from Scripts: `from Scripts.auth import User`
+- Main application imports from Scripts: `from Scripts.shared import manager`
+- Database path is relative to Scripts/: `DATABASE_URL = "sqlite:///../Data/agents.db"`
+
+### 3. SSL/TLS Configuration
 - All certificate generation in `CertificateConfiguration/`
 - Certificate files in `CertificateConfiguration/certs/`
-- Update paths in `main.py` and `run_servers.py` when moving files
+- Update paths in `Scripts/main.py` and `run_servers.py` when moving files
 - Use relative paths from project root
 
-### 3. Testing Guidelines
+### 4. Testing Guidelines
 - All test scripts go in `Testing/` directory
 - Use descriptive names for test files
 - Include proper error handling in test scripts
 - Document test procedures in README
 
-### 4. Documentation
-- Keep README.md comprehensive and up-to-date
+### 5. Documentation
+- Keep `Documentation/README.md` comprehensive and up-to-date
 - Document SSL setup in `CertificateConfiguration/SSL_SETUP.md`
 - Include troubleshooting guides
 - Provide clear usage examples
 
-### 5. Security Best Practices
+### 6. Security Best Practices
 - Use self-signed certificates for development only
 - Document production certificate requirements
 - Include security warnings in documentation
 - Validate all user inputs
 
-### 6. Development Workflow
+### 7. Development Workflow
 - **ALWAYS start servers with `python run_servers.py`**
 - Test both HTTP and HTTPS endpoints
 - Verify WebSocket connections work
@@ -54,26 +76,38 @@
 - Ensure proper error handling
 - Verify authentication works for both local and external requests
 
-### 7. Code Style
+### 8. Code Style
 - Use consistent naming conventions
 - Include proper logging
 - Add type hints where appropriate
 - Follow FastAPI best practices
 
-### 8. File Naming
+### 9. File Naming
 - Use descriptive, lowercase names
 - Separate words with underscores
 - Group related files in directories
 - Avoid generic names like "test.py"
 
-### 9. Path Management
+### 10. Path Management
 - Use relative paths from project root
 - Update all references when moving files
 - Test path changes thoroughly
 - Document path dependencies
 
-### 10. Error Handling
+### 11. Error Handling
 - Include comprehensive error messages
 - Log errors with appropriate levels
 - Provide user-friendly error responses
-- Include troubleshooting steps in errors 
+- Include troubleshooting steps in errors
+
+### 12. Database Management
+- Database files stored in `Data/` directory
+- Use relative paths in database configuration
+- Backup database files before migrations
+- Document database schema changes
+
+### 13. Configuration Management
+- Agent config files in `Config/` directory
+- Use consistent naming for config files
+- Document configuration options
+- Validate configuration on load 

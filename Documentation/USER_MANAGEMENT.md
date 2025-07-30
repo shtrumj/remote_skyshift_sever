@@ -9,6 +9,7 @@ This document describes the user creation scripts available for the Remote Agent
 A comprehensive user creation script with command-line argument parsing and additional options.
 
 **Features:**
+
 - Command-line argument parsing with `argparse`
 - Optional email and full name parameters
 - Input validation
@@ -17,6 +18,7 @@ A comprehensive user creation script with command-line argument parsing and addi
 - Help documentation
 
 **Usage:**
+
 ```bash
 # Basic usage
 python create_user.py <username> <password>
@@ -29,6 +31,7 @@ python create_user.py <username> <password> --verbose
 ```
 
 **Examples:**
+
 ```bash
 # Create admin user
 python create_user.py admin password123
@@ -41,6 +44,7 @@ python create_user.py jane password123 --email jane@example.com --full-name "Jan
 ```
 
 **Options:**
+
 - `--email, -e`: Email address (default: username@example.com)
 - `--full-name, -f`: Full name (default: username)
 - `--verbose, -v`: Verbose output
@@ -51,17 +55,20 @@ python create_user.py jane password123 --email jane@example.com --full-name "Jan
 A simplified version for quick user creation with minimal parameters.
 
 **Features:**
+
 - Simple command-line interface
 - Just username and password required
 - Quick and easy to use
 - Basic validation
 
 **Usage:**
+
 ```bash
 python create_user_simple.py <username> <password>
 ```
 
 **Examples:**
+
 ```bash
 # Create a simple user
 python create_user_simple.py testuser password123
@@ -85,7 +92,7 @@ Successful user creation will display:
 
 ```
 ✅ User 'username' created successfully!
-Login URL: http://localhost:4433/ui/login
+Login URL: http://remote.skyshift.dev:80/ui/login
 Username: username
 Password: password
 ```
@@ -120,8 +127,8 @@ Both scripts integrate with the existing authentication system:
 
 Users created with these scripts can immediately:
 
-1. **Login** at `http://localhost:4433/ui/login`
-2. **Access profile** at `http://localhost:4433/ui/profile`
+1. **Login** at `http://remote.skyshift.dev:80/ui/login`
+2. **Access profile** at `http://remote.skyshift.dev:80/ui/profile`
 3. **Manage account** through the web interface
 4. **Use all features** of the Remote Agent Manager
 
@@ -149,11 +156,13 @@ Users created with these scripts can immediately:
 ### Getting Help
 
 For the full-featured script:
+
 ```bash
 python create_user.py --help
 ```
 
 For the simple script:
+
 ```bash
 python create_user_simple.py
 # (will show usage if no arguments provided)
@@ -169,16 +178,17 @@ python create_user_simple.py
 
 ## Script Comparison
 
-| Feature | `create_user.py` | `create_user_simple.py` |
-|---------|------------------|-------------------------|
-| Command-line parsing | ✅ Full argparse | ❌ Basic sys.argv |
-| Email option | ✅ Optional | ❌ Auto-generated |
-| Full name option | ✅ Optional | ❌ Auto-generated |
-| Verbose output | ✅ Available | ❌ Not available |
-| Help documentation | ✅ Comprehensive | ❌ Basic |
-| Error handling | ✅ Detailed | ✅ Basic |
-| Use case | Production/admin | Quick testing |
+| Feature              | `create_user.py` | `create_user_simple.py` |
+| -------------------- | ---------------- | ----------------------- |
+| Command-line parsing | ✅ Full argparse | ❌ Basic sys.argv       |
+| Email option         | ✅ Optional      | ❌ Auto-generated       |
+| Full name option     | ✅ Optional      | ❌ Auto-generated       |
+| Verbose output       | ✅ Available     | ❌ Not available        |
+| Help documentation   | ✅ Comprehensive | ❌ Basic                |
+| Error handling       | ✅ Detailed      | ✅ Basic                |
+| Use case             | Production/admin | Quick testing           |
 
 Choose the script that best fits your needs:
+
 - **`create_user.py`**: For production use and user management
-- **`create_user_simple.py`**: For quick testing and development 
+- **`create_user_simple.py`**: For quick testing and development
